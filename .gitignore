@@ -1,0 +1,11 @@
+# Ignore the entire dev-gemini-clone directory
+dev-gemini-clone/
+
+# Ignore node_modules if it gets created
+node_modules/
+
+# Ignore any temporary files
+*.tmp
+*.temp
+.DS_Store
+Thumbs.db

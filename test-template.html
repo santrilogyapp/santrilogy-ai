@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Santrilogy AI Test</title>
+    <!-- Simulasi meta tag untuk konfigurasi Supabase -->
+    <meta name="supabase-url" content="YOUR_SUPABASE_URL_HERE">
+    <meta name="supabase-anon-key" content="YOUR_SUPABASE_ANON_KEY_HERE">
+</head>
+<body>
+    <h1>Santrilogy AI Template Test</h1>
+    <p>Ini adalah halaman uji untuk melihat apakah template bekerja dengan benar.</p>
+    <p>Cek console untuk pesan-pesan terkait koneksi Supabase.</p>
+    
+    <!-- Import template XML sebagai script untuk testing -->
+    <script>
+        // Simulasikan fungsi-fungsi yang biasanya disediakan oleh Blogger
+        window.SantrilogyApp = {
+            updateUserUI: function(user) {
+                console.log('Update user UI:', user);
+            },
+            closeModal: function(modalId) {
+                console.log('Close modal:', modalId);
+            },
+            showToast: function(message, type) {
+                console.log('Show toast:', message, type);
+            },
+            openModal: function(modalId) {
+                console.log('Open modal:', modalId);
+            }
+        };
+    </script>
+    
+    <!-- Script untuk menguji fungsi-fungsi utama dari template -->
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('DOM loaded, checking Santrilogy status...');
+            
+            // Cek apakah status Santrilogy tersedia
+            if (window.santrilogyStatus) {
+                console.log('Santrilogy status found:', window.santrilogyStatus);
+            } else {
+                console.warn('Santrilogy status not found - template might not be loaded');
+            }
+            
+            // Cek apakah fungsi-fungsi utama tersedia
+            const functionsToCheck = [
+                'testSupabaseConnection',
+                'firebaseLoadHistory',
+                'firebaseSaveSession',
+                'firebaseLoadSession',
+                'firebaseDeleteSession',
+                'firebaseEmailAuth',
+                'firebaseGoogleAuth',
+                'firebaseLogout'
+            ];
+            
+            functionsToCheck.forEach(funcName => {
+                if (typeof window[funcName] === 'function') {
+                    console.log(`✓ Function ${funcName} is available`);
+                } else {
+                    console.warn(`✗ Function ${funcName} is NOT available`);
+                }
+            });
+        });
+    </script>
+</body>
+</html>
