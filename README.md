@@ -77,6 +77,16 @@ Template ini dirancang untuk digunakan di platform Blogger. Anda dapat mengungga
 - **Integrasi AI**: Terhubung ke Google Generative AI melalui backend
 - **Tampilan Responsif**: Mendukung berbagai ukuran layar
 
+## Optimasi Performa
+
+Template ini telah dioptimalkan untuk performa tinggi dan skor PageSpeed terbaik:
+
+- **Preconnect & Preload**: Ditambahkan resource hints untuk domain eksternal penting
+- **Critical CSS Inlining**: CSS penting diinline langsung di head untuk rendering cepat
+- **Script Defer**: Penjadwalan loading script non-kritis
+- **Struktur XML Valid**: Memastikan validitas struktur XML dengan format XHTML yang benar
+- **Resource Optimization**: Struktur folder assets yang dioptimalkan
+
 ## Kontribusi
 
 Silakan buat pull request untuk kontribusi pada proyek ini.
