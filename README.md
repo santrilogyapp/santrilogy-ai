@@ -1,156 +1,97 @@
-# Santrilogy AI - Islamic AI Assistant
+# Santrilogy AI - Smart Islamic Assistant
 
-Santrilogy AI adalah ekosistem asisten kecerdasan buatan Islam Ahlussunnah wal Jamaah yang berjalan di dua platform sekaligus:
+Santrilogy AI is an intelligent Islamic assistant that combines modern AI technology with traditional Islamic knowledge. Built as a dual-platform application that works both as a Next.js web app and a lightweight Blogger skin.
 
-- **Web App (Next.js)**: Platform utama dengan performa maksimal
-- **Blogger Skin (XML)**: Versi ringan yang "menumpang" di hosting Blogger namun memiliki antarmuka chat modern
+## Features
 
-## Struktur Proyek
+- **Islamic Knowledge Base**: Access to classical Islamic texts and references
+- **Smart Tools**: Terjemah Kitab, Analisis I'rob, Tasykil, Tes Logika, Mode Belajar
+- **Modern UI**: Gemini-like interface with glassmorphism design
+- **Responsive Design**: Works on mobile and desktop devices
+- **Multimodal Support**: Camera, gallery, and document uploads
+- **Secure Architecture**: Proper separation of concerns with external CDN-loaded JavaScript
+
+## Architecture
+
+The application is built with separation of concerns in mind:
+- **HTML/XML**: Structure (in the template XML file)
+- **CSS**: Styling (in the `<b:skin>` section)
+- **JavaScript**: Behavior (external app.js file loaded via CDN)
+
+## Repository Structure
 
 ```
 santrilogy-ai/
-├── server.js                      # API server backend
-├── gemini-style-template.xml      # Template Blogger utama (premium design)
-├── santrilogy-ai.js               # JavaScript untuk XML template
-├── assets/                        # Library eksternal
-│   ├── js/                        # JavaScript libraries
-│   │   ├── marked/                # Markdown parser
-│   │   ├── mermaid/               # Diagram generator
-│   │   ├── highlight.js/          # Syntax highlighting
-│   │   ├── supabase/              # Supabase client
-│   │   └── santrilogy/            # Santrilogy scripts
-│   └── css/                       # CSS libraries
-│       └── highlight.js/          # Syntax highlighting themes
-├── supabase-schema.sql            # Skema database Supabase
-├── supabase-client.js             # Konfigurasi Supabase
-├── chat-manager.js                # Manajemen percakapan
-├── gemini-connector.js            # Integrasi Google Generative AI
-├── chat-service.js                # Layanan chat
-├── specialized-features.js        # Fitur-fitur khusus
-├── error-handling.js              # Sistem error handling
-├── integration-test.js            # Fungsi testing
-├── package.json                   # Dependensi proyek
-├── download-dependencies.js       # Script untuk mengunduh library
-├── .env                           # Konfigurasi environment
-└── README.md                      # Dokumentasi ini
+├── gemini-style-template.xml     # Main Blogger template
+├── optimized-assets/
+│   └── js/
+│       └── app.js               # External JavaScript file
+├── supabase/
+│   ├── config.toml              # Supabase configuration
+│   └── migrations/              # Database migration files
+├── supabase-schema.sql          # Database schema
+└── README.md                    # This file
 ```
 
-## Instalasi
+## Setup Instructions
 
-1. Clone repository ini
-2. Install dependensi:
+### For Publishing to GitHub and Using CDN
+
+1. **Create GitHub Repository**:
+   - Create a new repository named `santrilogy-ai` on your GitHub account
+   - Replace `yourusername` in the template with your actual GitHub username
+
+2. **Update the Script Reference**:
+   - In `gemini-style-template.xml`, change the script source to:
+   ```html
+   <script src="https://cdn.jsdelivr.net/gh/yourusername/santrilogy-ai@main/optimized-assets/js/app.js"></script>
+   ```
+
+3. **Push Files to GitHub**:
    ```bash
-   npm install
+   git remote add origin https://github.com/yourusername/santrilogy-ai.git
+   git branch -M main
+   git push -u origin main
    ```
-3. Unduh library eksternal (jika diperlukan):
+
+4. **CDN Access**:
+   - Your JavaScript file will be available at the CDN URL after pushing
+   - jsDelivr will automatically cache and serve the file globally
+
+### For Local Development
+
+1. **Clone the Repository**:
    ```bash
-   npm run download-deps
-   ```
-4. Buat file `.env` dengan konfigurasi:
-   ```
-   SUPABASE_URL=your_supabase_url
-   SUPABASE_ANON_KEY=your_supabase_anon_key
-   GEMINI_API_KEY=your_gemini_api_key
-   NODE_ENV=development
-   PORT=3000
+   git clone https://github.com/yourusername/santrilogy-ai.git
+   cd santrilogy-ai
    ```
 
-## Setup Server
-
-1. Jalankan server backend:
-   ```bash
-   npm start
-   ```
-   atau untuk pengembangan:
-   ```bash
-   npm run dev
+2. **Update Script Reference for Local Development**:
+   - Change the script source to local path for development:
+   ```html
+   <script src="./optimized-assets/js/app.js"></script>
    ```
 
-2. Server akan berjalan di `http://localhost:3000`
+## Usage
 
-## Setup Database
+1. **Upload to Blogger**:
+   - Upload `gemini-style-template.xml` as a custom template in Blogger
+   - The external JavaScript will be loaded automatically via CDN
 
-Jalankan skrip SQL di `supabase-schema.sql` di database Supabase Anda untuk membuat struktur tabel yang diperlukan:
+2. **Configuration**:
+   - The JavaScript handles UI interactions
+   - Backend API connections can be configured separately
 
-```sql
--- Tabel untuk menyimpan percakapan
-CREATE TABLE conversations (
-  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-  user_id TEXT,
-  session_id TEXT,
-  user_message TEXT,
-  ai_response TEXT,
-  timestamp TIMESTAMP DEFAULT NOW()
-);
+## Security
 
--- Tabel untuk menyimpan permintaan spesialis
-CREATE TABLE specialized_requests (
-  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-  user_id TEXT,
-  session_id TEXT,
-  feature_type TEXT, -- 'tasykil', 'irob', 'translate', 'learn'
-  input_text TEXT,
-  output_text TEXT,
-  timestamp TIMESTAMP DEFAULT NOW()
-);
-```
+- API keys should never be hardcoded in the client-side JavaScript
+- Use server-side proxies for API calls to protect sensitive keys
+- The JavaScript file is designed to be loaded externally for better security isolation
 
-## Penggunaan
+## Contributing
 
-### Blogger Template
-Template ini dirancang untuk digunakan di platform Blogger. Anda dapat mengunggah file `gemini-style-template.xml` sebagai template kustom di Blogger. Template ini sudah memiliki:
+Feel free to fork this repository and submit pull requests for improvements.
 
-- Desain premium dengan branding Santrilogy AI (tidak menyerupai Gemini)
-- Sidebar navigasi lengkap (New Chat, History, Upgrade, Settings)
-- Mode gelap/terang
-- Magic Tools (Mode Belajar, Terjemah Kitab, Tasykil, Analisis I'rob)
-- Antarmuka chat profesional
+## License
 
-### API Endpoints
-
-- `GET /health` - Cek status server
-- `POST /api/chat` - Fungsi chat umum
-- `POST /api/specialized` - Fungsi spesialis (tasykil, irob, translate, learn)
-- `GET /api/history/:sessionId` - Ambil riwayat chat
-
-## Fitur-fitur Utama
-
-- **Autentikasi**: Sistem login/register menggunakan Supabase Auth
-- **Manajemen Chat**: Sesi percakapan disimpan di Supabase
-- **Fitur Khusus Santrilogy**:
-  - Tasykil (penambahan harakat Arab)
-  - I'rob (analisis nahwu/sharaf)
-  - Mantiq (logika Aristotelian)
-  - Pembuatan RPP dari teks Arab
-  - Pencarian kitab kuning
-- **Integrasi AI**: Terhubung ke Google Generative AI melalui backend
-- **Tampilan Responsif**: Mendukung berbagai ukuran layar
-- **Premium Design**: Desain profesional dengan branding Santrilogy AI
-
-## Konfigurasi Environment
-
-File `.env` harus berisi:
-
-```env
-# Supabase Configuration
-SUPABASE_URL=your_supabase_url
-SUPABASE_ANON_KEY=your_supabase_anon_key
-
-# Gemini Configuration
-GEMINI_API_KEY=your_gemini_api_key
-GEMINI_DEFAULT_MODEL=gemini-1.5-flash
-GEMINI_PRO_MODEL=gemini-1.5-pro
-GEMINI_EMBEDDING_MODEL=embedding-001
-
-# Application
-NODE_ENV=development
-PORT=3000
-```
-
-## Kontribusi
-
-Silakan buat pull request untuk kontribusi pada proyek ini. Pastikan untuk mengikuti standar sanitas dan memastikan semua fitur berfungsi sebelum melakukan pull request.
-
-## Lisensi
-
-Proyek ini dilisensikan di bawah lisensi MIT - lihat file LICENSE untuk detailnya.
+This project is licensed under the terms described in the original project license.
