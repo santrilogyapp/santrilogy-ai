@@ -1997,6 +1997,9 @@
                 <button class='send-mic-btn mic' id='sendMicBtn' onclick='handleSendMic()'>
                   <i class='fas fa-microphone'/>
                 </button>
+                <button class='send-mic-btn send' id='sendBtn' onclick='sendMessage()' style='margin-left: 8px;'>
+                  <i class='fas fa-paper-plane'/>
+                </button>
               </div>
             </div>
             <p class='input-footer'>Santrilogy AI bisa keliru. Verifikasi ke ustadz.</p>
@@ -2518,7 +2521,137 @@
       /*]]>*/
     </script>
 
-    <!-- External JavaScript for Santrilogy AI -->
-   <script src='https://cdn.jsdelivr.net/gh/santrilogyapp/santrilogy-ai@main/optimized-assets/js/app.js'/>
+    <!-- Santrilogy AI Core JavaScript -->
+    <script>
+    /*<![CDATA[*/
+    /**
+     * SANTRILOGY AI CORE
+     * Menghubungkan Blogger dengan Supabase Edge Functions
+     */
+
+    // KONFIGURASI (Aman ditaruh di sini karena Anon Key hanya untuk akses publik)
+    const CONFIG = {
+        FUNCTION_URL: "https://jbbathydxvpgmgtauadm.supabase.co/functions/v1/chat-engine", // Ganti dengan URL Deploy tadi
+        SUPABASE_ANON_KEY: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpiYmF0aHlkeHZwZ21ndGF1YWRtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQ1MTMyNjMsImV4cCI6MjA4MDA4OTI2M30.9uUtMwX4G5gmhbFHv1l7DgNTedQtiWqSzZ_VgWYzFAo" // Ambil dari Dashboard Supabase -> Settings -> API
+    };
+
+    // Fungsi Utama: Mengirim Pesan
+    async function chatWithSantrilogy(userMessage) {
+        try {
+            console.log("Mengirim pesan ke Santrilogy...", userMessage);
+
+            const response = await fetch(CONFIG.FUNCTION_URL, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "Authorization": `Bearer ${CONFIG.SUPABASE_ANON_KEY}`
+                },
+                body: JSON.stringify({
+                    prompt: userMessage
+                })
+            });
+
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+
+            const data = await response.json();
+            return data.answer; // Mengembalikan teks jawaban AI
+
+        } catch (error) {
+            console.error("Santrilogy Error:", error);
+            return "Maaf kawan, sedang ada gangguan koneksi ke server pusat.";
+        }
+    }
+
+    // Fungsi Helper untuk UI (Dipanggil dari tombol kirim XML)
+    async function handleUserSend() {
+        const inputField = document.getElementById('userPrompt');
+        const chatContainer = document.getElementById('main');
+
+        const text = inputField.value;
+        if (!text) return;
+
+        // 1. Tampilkan Chat User di UI
+        addBubble(text, 'user');
+        inputField.value = ''; // Kosongkan input
+
+        // 2. Tampilkan Loading Skeleton
+        const loadingId = addLoadingBubble();
+
+        // 3. Panggil AI
+        const aiResponse = await chatWithSantrilogy(text);
+
+        // 4. Hapus Loading, Tampilkan Jawaban AI
+        removeLoadingBubble(loadingId);
+        addBubble(aiResponse, 'ai');
+    }
+
+    // --- FUNGSI UI SEDERHANA (Manipulasi DOM) ---
+    function addBubble(text, type) {
+        const div = document.createElement('div');
+        div.className = type === 'user' ? 'post-outer user-bubble' : 'post-outer ai-bubble';
+        // Gunakan Marked.js jika ingin support Markdown (Bold/Italic)
+        div.innerHTML = `<div class="msg">${type === 'user' ?
+          '<div class="msg-avatar user">U</div>' :
+          '<div class="msg-avatar ai"><div class="atom-mini"><div class="atom-nucleus"/><div class="atom-orbit orbit-1"/></div></div>'}
+          <div class="msg-body">
+            <div class="msg-header">
+              <span class="msg-name">${type === 'user' ? 'You' : 'Santrilogy AI'}</span>
+              <span class="msg-time">${new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
+            </div>
+            <div class="post-body">${text}</div>
+            <div class="msg-actions">
+              <span class="msg-action" title="Copy"><i class="fas fa-copy"/></span>
+              <span class="msg-action" title="Regenerate"><i class="fas fa-rotate"/></span>
+              <span class="msg-action" title="Like"><i class="fas fa-thumbs-up"/></span>
+              <span class="msg-action" title="Dislike"><i class="fas fa-thumbs-down"/></span>
+            </div>
+          </div>
+        </div>`;
+        document.getElementById('main').appendChild(div);
+
+        // Auto Scroll to bottom
+        document.getElementById('chatArea').scrollTop = document.getElementById('chatArea').scrollHeight;
+    }
+
+    function addLoadingBubble() {
+        const id = 'loading-' + Date.now();
+        const div = document.createElement('div');
+        div.id = id;
+        div.className = 'post-outer ai-bubble';
+        div.innerHTML = `<div class="msg">
+          <div class="msg-avatar ai">
+            <div class="atom-mini">
+              <div class="atom-nucleus"/>
+              <div class="atom-orbit orbit-1"/>
+            </div>
+          </div>
+          <div class="msg-body">
+            <div class="msg-header">
+              <span class="msg-name">Santrilogy AI</span>
+              <span class="msg-time">${new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
+            </div>
+            <div class="post-body">Sedang membuka kitab...</div>
+          </div>
+        </div>`;
+        document.getElementById('main').appendChild(div);
+        return id;
+    }
+
+    function removeLoadingBubble(id) {
+        const el = document.getElementById(id);
+        if (el) el.remove();
+    }
+
+    // Integrate with existing send functionality
+    function sendMessage() {
+        handleUserSend();
+    }
+    /*]]>*/
+    </script>
+
+    <!-- External fallback - will be removed in future versions -->
+    <script src='https://cdn.jsdelivr.net/gh/santrilogyapp/santrilogy-ai@main/optimized-assets/js/app.js'/>
   </body>
 </html>
