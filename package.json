@@ -1,33 +1,29 @@
 {
   "name": "santrilogy-ai",
   "version": "1.0.0",
-  "description": "Santrilogy AI - Islamic AI Assistant with Supabase and Gemini integration",
-  "main": "server.js",
-  "type": "module",
+  "description": "Santrilogy AI - Smart Islamic Assistant for Blogger Platform",
+  "main": "gemini-style-template.xml",
   "scripts": {
-    "start": "node server.js",
-    "dev": "nodemon server.js",
-    "download-deps": "node download-dependencies.js",
-    "test": "node test-template.html"
+    "test": "echo \"No tests specified\""
   },
-  "dependencies": {
-    "@google/generative-ai": "^0.24.1",
-    "@supabase/supabase-js": "^2.45.1",
-    "cors": "^2.8.5",
-    "dotenv": "^17.2.3",
-    "express": "^5.1.0",
-    "highlight.js": "^11.11.1",
-    "marked": "^14.1.4",
-    "mermaid": "^10.9.5"
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/yourusername/santrilogy-ai.git"
   },
   "keywords": [
-    "santrilogy",
-    "ai",
     "islamic",
-    "frontend",
-    "supabase",
-    "gemini"
+    "ai",
+    "blogger",
+    "template",
+    "chatbot",
+    "arabic",
+    "islam",
+    "education"
   ],
-  "author": "Santrilogy AI",
-  "license": "MIT"
+  "author": "Santrilogy AI Team",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/yourusername/santrilogy-ai/issues"
+  },
+  "homepage": "https://github.com/yourusername/santrilogy-ai#readme"
 }
