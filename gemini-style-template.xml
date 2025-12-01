@@ -1614,7 +1614,7 @@
           </div>
         </nav>
 
-        <!-- Sidebar Footer with Profile & Settings Dropdown -->
+        <!-- Sidebar Footer with Profile &amp; Settings Dropdown -->
         <div class='sidebar-footer'>
           <!-- Desktop Settings Dropdown -->
           <div class='settings-dropdown' id='settingsDropdown'>
@@ -1671,7 +1671,7 @@
 
               <div class='dropdown-divider'/>
 
-              <!-- Clear & Version -->
+              <!-- Clear &amp; Version -->
               <div class='dropdown-item' onclick='clearChats()' style='cursor: pointer;'>
                 <div class='dropdown-item-label'>
                   <i class='fas fa-trash' style='color: #ef4444;'/>
@@ -1746,7 +1746,7 @@
             <div class='dropdown-item' onclick='showTermsConditions()'>
               <div class='dropdown-item-label'>
                 <i class='fas fa-file-contract'/>
-                <span>Terms & Conditions</span>
+                <span>Terms &amp; Conditions</span>
               </div>
             </div>
           </div>
@@ -2347,7 +2347,7 @@
       }
 
       function showTermsConditions() {
-        alert('Terms & Conditions page coming soon!');
+        alert('Terms &amp; Conditions page coming soon!');
         closeMoreDropdown();
       }
 
