@@ -2076,6 +2076,6 @@
     </div>
 
     <!-- External JavaScript for Santrilogy AI -->
-    <script src="./optimized-assets/js/app.js"></script>
+    <script src="https://cdn.jsdelivr.net/gh/yourusername/santrilogy-ai@main/optimized-assets/js/app.js"></script>
   </body>
 </html>
