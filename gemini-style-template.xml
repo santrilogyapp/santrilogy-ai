@@ -1415,6 +1415,27 @@
 
       .mobile-color-btn.active { border-color: var(--text-primary); }
 
+      /* Mobile color picker improvements */
+      #customColorPicker {
+        width: 60px;
+        height: 40px;
+        border: none;
+        outline: none;
+        cursor: pointer;
+        opacity: 0;
+        position: absolute;
+        top: 0;
+        left: 0;
+        z-index: -1;
+      }
+
+      @media (max-width: 768px) {
+        #customColorPicker {
+          width: 80px;
+          height: 50px;
+        }
+      }
+
       .mobile-fontsize-btns {
         display: flex;
         gap: 6px;
@@ -2149,6 +2170,7 @@
     <script>
       /*<![CDATA[*/
       function openColorPicker() {
+        // On mobile devices, the input type="color" should work consistently
         document.getElementById('customColorPicker').click();
       }
 
@@ -2174,8 +2196,7 @@
         });
 
         // Find and activate the custom color pill
-        const customColorPill = document.querySelector('.c-custom, [onclick*="openColorPicker"]') ||
-                                 Array.from(colorPills).find(btn => btn.onclick && btn.onclick.toString().includes('openColorPicker'));
+        const customColorPill = document.querySelector('.c-custom, .mobile-color-btn[onclick*="openColorPicker"]');
         if (customColorPill) {
           customColorPill.classList.add('active');
         }
