@@ -2147,6 +2147,7 @@
 
     <!-- Custom theme color functions -->
     <script>
+      /*<![CDATA[*/
       function openColorPicker() {
         document.getElementById('customColorPicker').click();
       }
@@ -2465,6 +2466,7 @@
           isSwiping = false;
         });
       }
+      /*]]>*/
     </script>
 
     <!-- External JavaScript for Santrilogy AI -->
