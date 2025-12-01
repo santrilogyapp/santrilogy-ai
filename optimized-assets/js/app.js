@@ -1,727 +1,643 @@
 /**
- * Santrilogy AI - JavaScript Application Logic
- *
- * This file contains all the JavaScript functionality for the Santrilogy AI
- * Blogger template. It handles UI interactions, mobile gestures, tool functionality,
- * and user preferences.
- *
- * Features:
- * - Sidebar navigation and responsive behavior
- * - Mobile-friendly tools modal with swipe gestures
- * - Theme switching (light/dark mode)
- * - Accent color customization
- * - Font size adjustments
- * - Smart tools functionality (translation, i'rob, etc.)
- * - Voice input handling
- * - Keyboard shortcuts
- *
- * @author Santrilogy AI Team
- * @version 1.0.0
+ * SANTRILOGY AI - Frontend Application
+ * Refactored with proper initialization and error handling
  */
 
-// ============================================
-// SECURITY CONFIGURATION
-// ============================================
+// Core application functionality
+let recognition;
+let isListening = false;
 
-/**
- * API Configuration Object
- *
- * For security reasons, API keys should NOT be hardcoded here.
- * Instead:
- * 1. Store API keys in environment variables on the server side
- * 2. Pass keys to frontend via secure server endpoints when needed
- * 3. Or use a separate config file that's not committed to version control
- * 4. Consider using server-side proxy for API calls to hide keys
- *
- * Example structure for future API integration:
- */
-const API_CONFIG = {
-  // Supabase Configuration - DO NOT hardcode keys here
-  SUPABASE: {
-    // These should ideally be loaded from a secure endpoint
-    // url: process.env.SUPABASE_URL || '', // Recommended: load via secure API endpoint
-    // anonKey: process.env.SUPABASE_ANON_KEY || '', // Recommended: load via secure API endpoint
-  },
-
-  // Gemini Configuration - DO NOT hardcode keys here
-  GEMINI: {
-    // These should ideally be loaded from a secure endpoint
-    // apiKey: process.env.GEMINI_API_KEY || '', // Recommended: load via secure API endpoint
-    // model: 'gemini-pro', // Default model
-  },
-
-  // Backend API Configuration
-  BACKEND: {
-    baseUrl: '/api/', // Base URL for backend API calls
-  }
-};
-
-/**
- * Important Security Notes:
- *
- * 1. Never store sensitive API keys (Supabase, Gemini, etc.) in client-side code
- * 2. All API keys should be stored server-side and accessed via secure endpoints
- * 3. Use environment variables for API keys in production environments
- * 4. Consider implementing server-side proxy for all AI and database calls
- * 5. Implement proper authentication and authorization mechanisms
- * 6. Use HTTPS for all API communications
- * 7. Validate and sanitize all inputs on the server side
- *
- * If you need to customize the API keys for deployment without git push:
- * - Create a separate config file (e.g., config.local.js) that's git-ignored
- * - Load that file separately before this one
- * - Override the API_CONFIG values with your local configurations
- */
-
-// ============================================
-// SANTRILOGY AI APPLICATION MAIN LOGIC
-// ============================================
-
-// Global variables for DOM elements
-const sidebar = document.getElementById('sidebar');
-const overlay = document.getElementById('overlay');
-const userPrompt = document.getElementById('userPrompt');
-const sendMicBtn = document.getElementById('sendMicBtn');
-const plusBtn = document.getElementById('plusBtn');
-const profileChevron = document.getElementById('profileChevron');
-
-// Desktop dropdown elements
-const toolsDropdown = document.getElementById('toolsDropdown');
-const settingsDropdown = document.getElementById('settingsDropdown');
-
-// Mobile modal elements
-const toolsModal = document.getElementById('toolsModal');
-const toolsOverlay = document.getElementById('toolsOverlay');
-const settingsModal = document.getElementById('settingsModal');
-const settingsOverlay = document.getElementById('settingsOverlay');
-
-// Theme toggle elements
-const darkToggleDesktop = document.getElementById('darkToggleDesktop');
-const darkToggleMobile = document.getElementById('darkToggleMobile');
-
-// State variables
-let toolsOpen = false;
-let settingsOpen = false;
-
-// ============================================
-// GENERAL UTILITY FUNCTIONS
-// ============================================
-
-/**
- * Detects if the current device is mobile-sized
- * @returns {boolean} True if screen width is <= 768px
- */
-function isMobile() {
-  return window.innerWidth <= 768;
-}
-
-// ============================================
-// SIDEBAR NAVIGATION LOGIC
-// ============================================
-
-/**
- * Toggle the sidebar visibility (desktop/mobile)
- */
-function toggleSidebar() {
-  sidebar.classList.toggle('collapsed');
-  overlay.classList.toggle('show');
-}
-
-/**
- * Close the sidebar navigation
- */
-function closeSidebar() {
-  sidebar.classList.add('collapsed');
-  overlay.classList.remove('show');
-  closeAllDropdowns();
-}
-
-/**
- * Initialize sidebar based on current screen size
- */
-function initSidebar() {
-  if (isMobile()) {
-    sidebar.classList.add('collapsed');
-  } else {
-    sidebar.classList.remove('collapsed');
-  }
-}
-
-// Initialize sidebar and set up resize handler
-initSidebar();
-window.addEventListener('resize', function() {
-  initSidebar();
-  closeAllDropdowns();
-  closeAllModals();
-});
-
-// ============================================
-// DROPDOWN AND MODAL MANAGEMENT
-// ============================================
-
-/**
- * Close all dropdown menus in the application
- */
-function closeAllDropdowns() {
-  toolsOpen = false;
-  settingsOpen = false;
-  toolsDropdown.classList.remove('show');
-  settingsDropdown.classList.remove('show');
-  plusBtn.querySelector('i').className = 'fas fa-plus-circle';
-  profileChevron.style.transform = 'rotate(0deg)';
-}
-
-/**
- * Close all modal windows in the application
- */
-function closeAllModals() {
-  toolsModal.classList.remove('show');
-  toolsOverlay.classList.remove('show');
-  settingsModal.classList.remove('show');
-  settingsOverlay.classList.remove('show');
-  document.body.style.overflow = '';
-}
-
-// ============================================
-// TOOLS FUNCTIONALITY (Desktop vs Mobile)
-// ============================================
-
-/**
- * Toggle tools menu - uses dropdown on desktop, modal on mobile
- */
-function toggleTools() {
-  if (isMobile()) {
-    openToolsModal();
-  } else {
-    toggleToolsDropdown();
-  }
-}
-
-/**
- * Toggle the tools dropdown menu (desktop version)
- */
-function toggleToolsDropdown() {
-  closeSettingsDropdown();
-  toolsOpen = !toolsOpen;
-  toolsDropdown.classList.toggle('show', toolsOpen);
-  plusBtn.querySelector('i').className = toolsOpen ? 'fas fa-times' : 'fas fa-plus-circle';
-}
-
-/**
- * Close the tools dropdown menu
- */
-function closeToolsDropdown() {
-  toolsOpen = false;
-  toolsDropdown.classList.remove('show');
-  plusBtn.querySelector('i').className = 'fas fa-plus-circle';
-}
-
-/**
- * Open the tools modal (mobile version)
- */
-function openToolsModal() {
-  toolsModal.classList.add('show');
-  toolsOverlay.classList.add('show');
-  document.body.style.overflow = 'hidden';
-}
-
-/**
- * Close the tools modal
- */
-function closeToolsModal() {
-  toolsModal.classList.remove('show');
-  toolsOverlay.classList.remove('show');
-  document.body.style.overflow = '';
-}
-
-// ============================================
-// SETTINGS FUNCTIONALITY (Desktop vs Mobile)
-// ============================================
-
-/**
- * Toggle settings menu - uses dropdown on desktop, modal on mobile
- */
-function toggleSettings() {
-  if (isMobile()) {
-    closeSidebar();
-    openSettingsModal();
-  } else {
-    toggleSettingsDropdown();
-  }
-}
-
-/**
- * Toggle the settings dropdown menu (desktop version)
- */
-function toggleSettingsDropdown() {
-  closeToolsDropdown();
-  settingsOpen = !settingsOpen;
-  settingsDropdown.classList.toggle('show', settingsOpen);
-  profileChevron.style.transform = settingsOpen ? 'rotate(180deg)' : 'rotate(0deg)';
-}
-
-/**
- * Close the settings dropdown menu
- */
-function closeSettingsDropdown() {
-  settingsOpen = false;
-  settingsDropdown.classList.remove('show');
-  profileChevron.style.transform = 'rotate(0deg)';
-}
-
-/**
- * Open the settings modal (mobile version)
- */
-function openSettingsModal() {
-  settingsModal.classList.add('show');
-  settingsOverlay.classList.add('show');
-  document.body.style.overflow = 'hidden';
-}
-
-/**
- * Close the settings modal
- */
-function closeSettingsModal() {
-  settingsModal.classList.remove('show');
-  settingsOverlay.classList.remove('show');
-  document.body.style.overflow = '';
-}
-
-// ============================================
-// EVENT HANDLERS
-// ============================================
-
-// Handle clicks outside dropdowns to close them
-document.addEventListener('click', function(e) {
-  if (!isMobile()) {
-    // Close tools dropdown
-    if (toolsOpen && !toolsDropdown.contains(e.target) && !plusBtn.contains(e.target)) {
-      closeToolsDropdown();
-    }
-    // Close settings dropdown
-    if (settingsOpen && !settingsDropdown.contains(e.target) && 
-        !e.target.closest('.profile-card') && 
-        !e.target.closest('.nav-item[onclick*="toggleSettings"]')) {
-      closeSettingsDropdown();
-    }
-  }
-});
-
-// ============================================
-// INPUT FIELD HANDLING
-// ============================================
-
-/**
- * Handle input changes in the message field
- */
-function handleInput() {
-  const val = userPrompt.value.trim();
-  const icon = sendMicBtn.querySelector('i');
-
-  if (val.length > 0) {
-    sendMicBtn.classList.remove('mic');
-    sendMicBtn.classList.add('send');
-    icon.className = 'fas fa-arrow-up';
-  } else {
-    sendMicBtn.classList.remove('send');
-    sendMicBtn.classList.add('mic');
-    icon.className = 'fas fa-microphone';
-  }
-
-  // Auto resize textarea
-  userPrompt.style.height = 'auto';
-  userPrompt.style.height = Math.min(userPrompt.scrollHeight, 120) + 'px';
-}
-
-/**
- * Handle keyboard events in the input field
- * @param {KeyboardEvent} e - The keyboard event
- */
-function handleKeyDown(e) {
-  if (e.key === 'Enter' && !e.shiftKey) {
-    e.preventDefault();
-    handleSendMic();
-  }
-}
-
-/**
- * Handle send or microphone button click
- */
-function handleSendMic() {
-  const val = userPrompt.value.trim();
-  if (val.length > 0) {
-    sendMessage(val);
-  } else {
-    startVoice();
-  }
-}
-
-/**
- * Send a message to the AI backend
- * @param {string} text - The message text to send
- */
-function sendMessage(text) {
-  console.log('Sending message:', text);
-  // Add your send message logic here
-  userPrompt.value = '';
-  handleInput();
-}
-
-/**
- * Start voice recording using browser's speech recognition
- */
-function startVoice() {
-  console.log('Starting voice input');
-  // Add voice recognition logic here
-
-  // Example: Web Speech API
-  if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
-    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-    const recognition = new SpeechRecognition();
-    recognition.lang = 'id-ID';
-    recognition.continuous = false;
-
-    recognition.onresult = function(event) {
-      const transcript = event.results[0][0].transcript;
-      userPrompt.value = transcript;
-      handleInput();
-    };
-
-    recognition.onerror = function(event) {
-      console.error('Voice error:', event.error);
-    };
-
-    recognition.start();
-
-    // Visual feedback
-    sendMicBtn.style.background = '#ef4444';
-    sendMicBtn.querySelector('i').className = 'fas fa-stop';
-
-    recognition.onend = function() {
-      sendMicBtn.style.background = '';
-      handleInput();
-    };
-  } else {
-    alert('Browser tidak mendukung voice input');
-  }
-}
-
-// ============================================
-// THEME MANAGEMENT (DARK MODE)
-// ============================================
-
-/**
- * Toggle between light and dark themes
- */
-function toggleDarkMode() {
-  const isDark = document.body.getAttribute('data-theme') === 'dark';
-  const newTheme = isDark ? 'light' : 'dark';
-
-  document.body.setAttribute('data-theme', newTheme);
-  localStorage.setItem('theme', newTheme);
-
-  // Update both toggles
-  updateDarkToggles(!isDark);
-}
-
-/**
- * Update the visual state of dark mode toggles
- * @param {boolean} isDark - Whether dark mode is currently active
- */
-function updateDarkToggles(isDark) {
-  if (darkToggleDesktop) {
-    darkToggleDesktop.classList.toggle('on', isDark);
-  }
-  if (darkToggleMobile) {
-    darkToggleMobile.classList.toggle('on', isDark);
-  }
-}
-
-// ============================================
-// CUSTOMIZATION OPTIONS
-// ============================================
-
-/**
- * Set the accent color theme
- * @param {HTMLElement} btn - The color button element that was clicked
- */
-function setAccent(btn) {
-  const accent = btn.dataset.accent;
-
-  if (accent === 'indigo') {
-    document.body.removeAttribute('data-accent');
-  } else {
-    document.body.setAttribute('data-accent', accent);
-  }
-
-  localStorage.setItem('accent', accent);
-
-  // Update all color buttons
-  document.querySelectorAll('.color-pill, .mobile-color-btn').forEach(b => {
-    b.classList.toggle('active', b.dataset.accent === accent);
-  });
-}
-
-/**
- * Set the font size preference
- * @param {HTMLElement} btn - The size button element that was clicked
- */
-function setFontSize(btn) {
-  const size = btn.dataset.size;
-
-  if (size === 'normal') {
-    document.body.removeAttribute('data-fontsize');
-  } else {
-    document.body.setAttribute('data-fontsize', size);
-  }
-
-  localStorage.setItem('fontsize', size);
-
-  // Update all size buttons
-  document.querySelectorAll('.size-btn, .mobile-fontsize-btn').forEach(b => {
-    b.classList.toggle('active', b.dataset.size === size);
-  });
-}
-
-// ============================================
-// TOOL AND UPLOAD FUNCTIONALITY
-// ============================================
-
-/**
- * Handle usage of specialized tools (translation, i'rob, etc.)
- * @param {string} tool - The tool identifier to use
- */
-function useTool(tool) {
-  const prompts = {
-    terjemah: 'Terjemahkan teks Arab berikut ke bahasa Indonesia:\n\n',
-    irob: "Analisis i'rob (parsing nahwu) kalimat berikut:\n\n",
-    harokat: 'Beri harakat/syakal pada teks Arab berikut:\n\n',
-    logika: 'Analisis logika/silogisme dari pernyataan berikut:\n\n',
-    belajar: 'Jelaskan secara detail step by step tentang:\n\n',
-    quiz: 'Buatkan 5 soal quiz pilihan ganda tentang:\n\n'
-  };
-
-  userPrompt.value = prompts[tool] || '';
-  userPrompt.focus();
-  closeToolsDropdown();
-  closeToolsModal();
-  handleInput();
-}
-
-/**
- * Handle file upload functionality
- * @param {string} type - The type of upload (camera, gallery, document)
- */
-function handleUpload(type) {
-  closeToolsDropdown();
-  closeToolsModal();
-
-  const input = document.createElement('input');
-  input.type = 'file';
-
-  switch(type) {
-    case 'camera':
-      input.accept = 'image/*';
-      input.capture = 'environment';
-      break;
-    case 'gallery':
-      input.accept = 'image/*';
-      break;
-    case 'document':
-      input.accept = '.pdf,.doc,.docx,.txt,.xls,.xlsx';
-      break;
-  }
-
-  input.onchange = function(e) {
-    const file = e.target.files[0];
-    if (file) {
-      console.log('Selected file:', file.name, file.type, file.size);
-      // Handle file upload logic here
-      userPrompt.value = `[Uploaded: ${file.name}]\n\nAnalisis file ini:`;
-      handleInput();
-    }
-  };
-
-  input.click();
-}
-
-// ============================================
-// GENERAL APPLICATION FUNCTIONS
-// ============================================
-
-/**
- * Start a new chat session (resets current conversation)
- */
-function startNewChat() {
-  if (confirm('Mulai chat baru? Percakapan saat ini akan dihapus.')) {
-    location.reload();
-  }
-}
-
-/**
- * Pre-populate the input field with a question
- * @param {string} q - The question to pre-populate
- */
-function askQuestion(q) {
-  userPrompt.value = q;
-  userPrompt.focus();
-  handleInput();
-}
-
-/**
- * Clear all chat history
- */
-function clearChats() {
-  if (confirm('Hapus semua riwayat chat? Tindakan ini tidak dapat dibatalkan.')) {
-    console.log('All chats cleared');
-    closeSettingsDropdown();
-    closeSettingsModal();
-    // Add clear logic here
-  }
-}
-
-// ============================================
-// MOBILE GESTURE SUPPORT
-// ============================================
-
-/**
- * Set up swipe gesture functionality for modal windows
- * @param {HTMLElement} modal - The modal element to add swipe support to
- * @param {Function} closeFunc - The function to call when swiping down
- */
-function setupSwipeGesture(modal, closeFunc) {
-  let startY = 0;
-  let currentY = 0;
-  let isDragging = false;
-
-  modal.addEventListener('touchstart', function(e) {
-    if (e.target.closest('.modal-body')) {
-      const scrollTop = modal.querySelector('.modal-body').scrollTop;
-      if (scrollTop > 0) return;
-    }
-    startY = e.touches[0].clientY;
-    isDragging = true;
-  }, { passive: true });
-
-  modal.addEventListener('touchmove', function(e) {
-    if (!isDragging) return;
-    currentY = e.touches[0].clientY;
-    const deltaY = currentY - startY;
-
-    if (deltaY > 0) {
-      modal.style.transform = `translateY(${deltaY}px)`;
-      modal.style.transition = 'none';
-    }
-  }, { passive: true });
-
-  modal.addEventListener('touchend', function() {
-    if (!isDragging) return;
-    isDragging = false;
-
-    const deltaY = currentY - startY;
-    modal.style.transition = '';
-
-    if (deltaY > 100) {
-      closeFunc();
-    }
-
-    modal.style.transform = '';
-    startY = 0;
-    currentY = 0;
-  });
-}
-
-setupSwipeGesture(toolsModal, closeToolsModal);
-setupSwipeGesture(settingsModal, closeSettingsModal);
-
-// ============================================
-// KEYBOARD SHORTCUTS
-// ============================================
-
-// Set up keyboard shortcut handlers
-document.addEventListener('keydown', function(e) {
-  // Escape to close everything
-  if (e.key === 'Escape') {
-    closeAllDropdowns();
-    closeAllModals();
-    closeSidebar();
-  }
-
-  // Ctrl/Cmd + K to focus input
-  if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
-    e.preventDefault();
-    userPrompt.focus();
-  }
-
-  // Ctrl/Cmd + / to toggle sidebar
-  if ((e.ctrlKey || e.metaKey) && e.key === '/') {
-    e.preventDefault();
-    toggleSidebar();
-  }
-
-  // Ctrl/Cmd + , to open settings
-  if ((e.ctrlKey || e.metaKey) && e.key === ',') {
-    e.preventDefault();
-    toggleSettings();
-  }
-});
-
-// ============================================
-// INITIALIZE SAVED SETTINGS
-// ============================================
-
-// Load saved user preferences from localStorage
-(function loadSettings() {
-  // Theme
-  const savedTheme = localStorage.getItem('theme');
-  if (savedTheme === 'dark') {
-    document.body.setAttribute('data-theme', 'dark');
-    updateDarkToggles(true);
-  }
-
-  // Accent color
-  const savedAccent = localStorage.getItem('accent');
-  if (savedAccent && savedAccent !== 'indigo') {
-    document.body.setAttribute('data-accent', savedAccent);
-    document.querySelectorAll('.color-pill, .mobile-color-btn').forEach(btn => {
-      btn.classList.toggle('active', btn.dataset.accent === savedAccent);
-    });
-  }
-
-  // Font size
-  const savedFontSize = localStorage.getItem('fontsize');
-  if (savedFontSize && savedFontSize !== 'normal') {
-    document.body.setAttribute('data-fontsize', savedFontSize);
-    document.querySelectorAll('.size-btn, .mobile-fontsize-btn').forEach(btn => {
-      btn.classList.toggle('active', btn.dataset.size === savedFontSize);
-    });
-  }
-})();
-
-// ============================================
-// UTILITY FUNCTIONS
-// ============================================
-
-/**
- * Scroll chat area to the bottom
- */
-function scrollToBottom() {
-  const chatArea = document.getElementById('chatArea');
-  if (chatArea) {
-    chatArea.scrollTop = chatArea.scrollHeight;
-  }
-}
-
-// ============================================
-// APPLICATION INITIALIZATION
-// ============================================
-
-// Initialize application after DOM is loaded
 document.addEventListener('DOMContentLoaded', function() {
-  scrollToBottom();
+    console.log("Initializing Santrilogy Frontend...");
 
-  // Focus input on desktop
-  if (!isMobile()) {
-    setTimeout(() => userPrompt.focus(), 100);
-  }
+    // 1. Setup Elements & Listeners safely
+    const actionBtn = document.getElementById('sendMicBtn'); // Using the correct ID from the XML
+    const userPrompt = document.getElementById('userPrompt');
+    const toolsModal = document.getElementById('toolsModal');
+    
+    // Initialize core functionality
+    initSpeechRecognition();
+    
+    if (actionBtn) {
+        actionBtn.addEventListener('click', handleActionClick);
+    } else {
+        console.warn('Action button (#sendMicBtn) not found');
+    }
+    
+    if (userPrompt) {
+        // Use the inline handler for input since it's already defined in the XML
+        userPrompt.addEventListener('keydown', handleKeyDown);
+    } else {
+        console.warn('User prompt (#userPrompt) not found');
+    }
+
+    // Initialize mobile swipe gestures if elements exist
+    if (toolsModal) {
+        setupSwipeGesture();
+    } else {
+        console.warn('Tools modal (#toolsModal) not found');
+    }
+    
+    // Initialize scroll to top for welcome screen
+    setTimeout(() => {
+        if (document.querySelector('.welcome')) {
+            window.scrollTo(0, 0);
+        }
+    }, 100);
+
+    console.log("Santrilogy Frontend initialized successfully");
 });
+
+function handleKeyDown(event) {
+    if (event.key === 'Enter' && !event.shiftKey) {
+        event.preventDefault();
+        handleActionClick();
+    }
+}
+
+function handleActionClick() {
+    const input = document.getElementById('userPrompt');
+    
+    if (!input) {
+        console.error('User prompt element not found');
+        return;
+    }
+    
+    if (input.value.trim().length > 0) {
+        sendMessage();
+    } else {
+        handleSendMic();
+    }
+}
+
+// Santrilogy-specific functions
+async function sendMessage() {
+    const input = document.getElementById('userPrompt');
+    
+    if (!input) {
+        console.error('User prompt element not found');
+        return;
+    }
+    
+    const text = input.value.trim();
+    
+    if (!text) {
+        console.warn('No message to send');
+        return; // Guard clause
+    }
+    
+    console.log("Sending message:", text); // Debugging
+    
+    try {
+        // 1. Tampilkan Chat User di UI
+        addBubble(text, 'user');
+        input.value = ''; // Kosongkan input
+
+        // Update button state after clearing input
+        handleInput();
+        
+        // 2. Tampilkan Loading Skeleton
+        const loadingId = addLoadingBubble();
+
+        // 3. Panggil AI
+        const aiResponse = await chatWithSantrilogy(text);
+
+        // 4. Hapus Loading, Tampilkan Jawaban AI
+        removeLoadingBubble(loadingId);
+        addBubble(aiResponse, 'ai');
+        
+    } catch (error) {
+        console.error("Error sending message:", error);
+        addBubble("Maaf kawan, sedang ada gangguan koneksi ke server pusat.", 'ai');
+    }
+}
+
+// Toggle icon based on input content
+function handleInput() {
+    const input = document.getElementById('userPrompt');
+    const btn = document.getElementById('sendMicBtn');
+    const icon = document.getElementById('actionIcon');
+    
+    if (!input) {
+        console.warn('User prompt element not found in handleInput');
+        return;
+    }
+    
+    if (!btn) {
+        console.warn('Action button element not found in handleInput');
+        return;
+    }
+    
+    // Auto resize textarea
+    input.style.height = 'auto';
+    input.style.height = (input.scrollHeight) + 'px';
+    if(input.value === '') input.style.height = 'auto';
+
+    // Toggle Icon
+    if (input.value.trim().length > 0) {
+        btn.className = 'send-mic-btn send';
+        if (icon) icon.className = 'fas fa-paper-plane';
+    } else {
+        btn.className = 'send-mic-btn mic';
+        if (icon) icon.className = 'fas fa-microphone';
+    }
+}
+
+// Core chat functionality
+async function chatWithSantrilogy(userMessage) {
+    const CONFIG = {
+        FUNCTION_URL: "https://jbbathydxvpgmgtauadm.supabase.co/functions/v1/chat-engine",
+        SUPABASE_ANON_KEY: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpiYmF0aHlkeHZwZ21ndGF1YWRtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQ1MTMyNjMsImV4cCI6MjA4MDA4OTI2M30.9uUtMwX4G5gmhbFHv1l7DgNTedQtiWqSzZ_VgWYzFAo"
+    };
+
+    try {
+        console.log("Mengirim pesan ke Santrilogy...", userMessage);
+
+        const response = await fetch(CONFIG.FUNCTION_URL, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${CONFIG.SUPABASE_ANON_KEY}`
+            },
+            body: JSON.stringify({
+                prompt: userMessage
+            })
+        });
+
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const data = await response.json();
+        return data.answer; // Mengembalikan teks jawaban AI
+
+    } catch (error) {
+        console.error("Santrilogy Error:", error);
+        return "Maaf kawan, sedang ada gangguan koneksi ke server pusat.";
+    }
+}
+
+// UI helper functions
+function addBubble(text, type) {
+    const mainElement = document.getElementById('main');
+    
+    if (!mainElement) {
+        console.error('Main container not found for adding bubble');
+        return;
+    }
+    
+    const div = document.createElement('div');
+    div.className = type === 'user' ? 'post-outer user-bubble' : 'post-outer ai-bubble';
+    // Properly formatted bubble with avatar, header, and actions
+    div.innerHTML = `<div class="msg">${type === 'user' ? 
+      '<div class="msg-avatar user">U</div>' : 
+      '<div class="msg-avatar ai"><div class="atom-mini"><div class="atom-nucleus"/><div class="atom-orbit orbit-1"/></div></div></div>'}
+      <div class="msg-body">
+        <div class="msg-header">
+          <span class="msg-name">${type === 'user' ? 'You' : 'Santrilogy AI'}</span>
+          <span class="msg-time">${new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
+        </div>
+        <div class="post-body">${text}</div>
+        <div class="msg-actions">
+          <span class="msg-action" title="Copy"><i class="fas fa-copy"/></span>
+          <span class="msg-action" title="Regenerate"><i class="fas fa-rotate"/></span>
+          <span class="msg-action" title="Like"><i class="fas fa-thumbs-up"/></span>
+          <span class="msg-action" title="Dislike"><i class="fas fa-thumbs-down"/></span>
+        </div>
+      </div>
+    </div>`;
+    
+    mainElement.appendChild(div);
+
+    // Auto Scroll to bottom
+    const chatArea = document.getElementById('chatArea');
+    if (chatArea) {
+        chatArea.scrollTop = chatArea.scrollHeight;
+    }
+}
+
+function addLoadingBubble() {
+    const mainElement = document.getElementById('main');
+    
+    if (!mainElement) {
+        console.error('Main container not found for adding loading bubble');
+        return;
+    }
+    
+    const id = 'loading-' + Date.now();
+    const div = document.createElement('div');
+    div.id = id;
+    div.className = 'post-outer ai-bubble';
+    div.innerHTML = `<div class="msg">
+      <div class="msg-avatar ai">
+        <div class="atom-mini">
+          <div class="atom-nucleus"/>
+          <div class="atom-orbit orbit-1"/>
+        </div>
+      </div>
+      <div class="msg-body">
+        <div class="msg-header">
+          <span class="msg-name">Santrilogy AI</span>
+          <span class="msg-time">${new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
+        </div>
+        <div class="post-body">Sedang membuka kitab...</div>
+      </div>
+    </div>`;
+    
+    mainElement.appendChild(div);
+    return id;
+}
+
+function removeLoadingBubble(id) {
+    const el = document.getElementById(id);
+    if (el) el.remove();
+}
+
+// Speech Recognition Functions
+function initSpeechRecognition() {
+    if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        recognition = new SpeechRecognition();
+        recognition.continuous = false;
+        recognition.interimResults = true;
+        recognition.lang = 'id-ID'; // Set to Indonesian language
+        recognition.maxAlternatives = 1;
+
+        recognition.onresult = function(event) {
+            let transcript = '';
+            for (let i = 0; i < event.results.length; i++) {
+                if (event.results[i].isFinal) {
+                    transcript = event.results[i][0].transcript;
+                } else {
+                    transcript += event.results[i][0].transcript;
+                }
+            }
+            
+            const input = document.getElementById('userPrompt');
+            if (input) {
+                input.value = transcript;
+                handleInput(); // Update button state
+            }
+        };
+
+        recognition.onerror = function(event) {
+            console.error('Speech recognition error', event.error);
+            stopListening();
+        };
+
+        recognition.onend = function() {
+            // Don't automatically stop listening - let the user decide
+            // For mobile, we might need to restart in some cases
+            if (isListening) {
+                // On some mobile browsers, we need to restart recognition for continuous use
+                setTimeout(() => {
+                    if (isListening && recognition) {
+                        try {
+                            recognition.start();
+                        } catch (e) {
+                            console.log('Could not restart recognition:', e);
+                            stopListening();
+                        }
+                    }
+                }, 100);
+            }
+        };
+    } else {
+        console.warn('Browser Anda tidak mendukung fitur Speech Recognition. Silakan gunakan browser modern seperti Chrome.');
+        stopListening();
+    }
+}
+
+function handleSendMic() {
+    if (!isListening) {
+        startVoice();
+    } else {
+        stopListening();
+    }
+}
+
+function startVoice() {
+    if (!recognition) {
+        initSpeechRecognition();
+    }
+
+    if (recognition) {
+        try {
+            const btn = document.getElementById('sendMicBtn');
+            const icon = document.getElementById('actionIcon');
+            
+            if (btn) {
+                btn.className = 'send-mic-btn send';
+            }
+            
+            if (icon) {
+                icon.className = 'fas fa-circle';
+            }
+            
+            recognition.start();
+            isListening = true;
+        } catch (error) {
+            console.error('Error starting recognition:', error);
+            // Mobile Safari and some other mobile browsers may require user gesture to enable speech recognition
+            if (error.message && error.message.includes('no-speech')) {
+                alert('Silakan ucapkan sesuatu. Jika tidak berfungsi, pastikan izin mikrofon telah diberikan.');
+            }
+            stopListening();
+        }
+    }
+}
+
+function stopListening() {
+    if (recognition && isListening) {
+        try {
+            recognition.stop();
+        } catch (e) {
+            console.log('Recognition stop error:', e);
+        }
+        
+        const btn = document.getElementById('sendMicBtn');
+        const icon = document.getElementById('actionIcon');
+        
+        if (btn) {
+            btn.className = 'send-mic-btn mic';
+        }
+        
+        if (icon) {
+            icon.className = 'fas fa-microphone';
+        }
+        
+        isListening = false;
+    }
+}
+
+// Swipe Gesture Function for Mobile Modal
+function setupSwipeGesture() {
+    const modal = document.getElementById('toolsModal');
+    if (!modal) {
+        console.warn('Tools modal not found for swipe gesture setup');
+        return;
+    }
+    
+    let startY = 0;
+    let currentY = 0;
+    let isSwiping = false;
+    
+    modal.addEventListener('touchstart', (e) => {
+        startY = e.touches[0].clientY;
+        isSwiping = true;
+    });
+    
+    modal.addEventListener('touchmove', (e) => {
+        if (!isSwiping) return;
+        
+        currentY = e.touches[0].clientY;
+        const deltaY = currentY - startY;
+        
+        // Only allow swiping down
+        if (deltaY > 0) {
+            modal.style.transform = `translateY(${deltaY}px)`;
+        }
+    });
+    
+    modal.addEventListener('touchend', (e) => {
+        if (!isSwiping) return;
+        
+        const deltaY = currentY - startY;
+        const threshold = 100; // Minimum distance to close modal
+        
+        if (deltaY > threshold) {
+            // Swipe down enough to close the modal
+            closeToolsModal();
+        } else {
+            // Reset position
+            modal.style.transform = 'translateY(0)';
+        }
+        
+        isSwiping = false;
+    });
+}
+
+// Additional UI functions
+function closeToolsModal() {
+    const modal = document.getElementById('toolsModal');
+    const overlay = document.getElementById('toolsOverlay');
+    
+    if (modal) {
+        modal.classList.remove('show');
+    }
+    
+    if (overlay) {
+        overlay.classList.remove('show');
+    }
+    
+    if (document.body) {
+        document.body.style.overflow = '';
+    }
+}
+
+// Other UI functions that might be called from XML
+function askQuestion(question) {
+    const input = document.getElementById('userPrompt');
+    if (input) {
+        input.value = question;
+        handleInput(); // Update button state
+    }
+}
+
+// More dropdown functions
+function toggleMoreDropdown() {
+    const dropdown = document.getElementById('moreDropdown');
+    const isVisible = dropdown && dropdown.classList.contains('show');
+    
+    if (isVisible) {
+        closeMoreDropdown();
+    } else if (dropdown) {
+        dropdown.classList.add('show');
+        // Close dropdown when clicking outside
+        setTimeout(() => {
+            document.addEventListener('click', closeMoreDropdownOnClickOutside);
+        }, 10);
+    }
+}
+
+function closeMoreDropdown() {
+    const dropdown = document.getElementById('moreDropdown');
+    if (dropdown) {
+        dropdown.classList.remove('show');
+        document.removeEventListener('click', closeMoreDropdownOnClickOutside);
+    }
+}
+
+function closeMoreDropdownOnClickOutside(event) {
+    const dropdown = document.getElementById('moreDropdown');
+    const moreBtn = document.querySelector('[onclick*="toggleMoreDropdown"]');
+    
+    if (dropdown && !dropdown.contains(event.target) && moreBtn && !moreBtn.contains(event.target)) {
+        closeMoreDropdown();
+    }
+}
+
+// More menu functions
+function shareCurrentPage() {
+    if (navigator.share) {
+        navigator.share({
+            title: 'Santrilogy AI',
+            text: 'Check out Santrilogy AI - Your virtual Islamic study companion',
+            url: window.location.href
+        }).catch(console.error);
+    } else {
+        // Fallback: Copy to clipboard
+        navigator.clipboard.writeText(window.location.href).then(() => {
+            alert('Link copied to clipboard!');
+        });
+    }
+    closeMoreDropdown();
+}
+
+function downloadApp() {
+    alert('Download App feature coming soon!');
+    closeMoreDropdown();
+}
+
+function showPrivacyPolicy() {
+    alert('Privacy Policy page coming soon!');
+    closeMoreDropdown();
+}
+
+function showTermsConditions() {
+    alert('Terms & Conditions page coming soon!');
+    closeMoreDropdown();
+}
+
+// Responsive toggle for tools
+function toggleToolsResponsive() {
+    const isMobile = window.innerWidth <= 768;
+    
+    if (isMobile) {
+        // On mobile, show the mobile modal with slide up animation
+        showToolsModal();
+    } else {
+        // On desktop, toggle the desktop dropdown
+        toggleTools();
+    }
+}
+
+// Modified showToolsModal to add swipe gesture support
+function showToolsModal() {
+    const modal = document.getElementById('toolsModal');
+    const overlay = document.getElementById('toolsOverlay');
+    
+    // Show the modal with slide up animation
+    if (modal) {
+        modal.classList.add('show');
+    }
+    
+    if (overlay) {
+        overlay.classList.add('show');
+    }
+    
+    if (document.body) {
+        document.body.style.overflow = 'hidden';
+    }
+}
+
+// Toggle desktop tools dropdown
+function toggleTools() {
+    const dropdown = document.getElementById('toolsDropdown');
+    const isVisible = dropdown && dropdown.classList.contains('show');
+    
+    if (isVisible) {
+        closeToolsDropdown();
+    } else if (dropdown) {
+        dropdown.classList.add('show');
+        // Close dropdown when clicking outside
+        setTimeout(() => {
+            document.addEventListener('click', closeToolsDropdownOnClickOutside);
+        }, 10);
+    }
+}
+
+function closeToolsDropdown() {
+    const dropdown = document.getElementById('toolsDropdown');
+    if (dropdown) {
+        dropdown.classList.remove('show');
+        document.removeEventListener('click', closeToolsDropdownOnClickOutside);
+    }
+}
+
+function closeToolsDropdownOnClickOutside(event) {
+    const dropdown = document.getElementById('toolsDropdown');
+    const plusBtn = document.getElementById('plusBtn');
+    
+    if (dropdown && !dropdown.contains(event.target) && plusBtn && !plusBtn.contains(event.target)) {
+        closeToolsDropdown();
+    }
+}
+
+// Custom theme color functions
+function openColorPicker() {
+    const colorPicker = document.getElementById('customColorPicker');
+    if (colorPicker) {
+        colorPicker.click();
+    }
+}
+
+function applyCustomColor(color) {
+    // Update --accent variable
+    if (document.documentElement) {
+        document.documentElement.style.setProperty('--accent', color);
+    }
+    
+    // Generate a complementary color for --accent-2
+    const accent2 = calculateComplementaryColor(color);
+    if (document.documentElement) {
+        document.documentElement.style.setProperty('--accent-2', accent2);
+    }
+    
+    // Update --gradient-1 based on the custom color
+    const gradient = `linear-gradient(135deg, ${color} 0%, ${accent2} 50%, #06b6d4 100%)`;
+    if (document.documentElement) {
+        document.documentElement.style.setProperty('--gradient-1', gradient);
+    }
+    
+    // Update data-accent attribute on body to track custom theme
+    if (document.body) {
+        document.body.setAttribute('data-accent', 'custom');
+    }
+    
+    // Remove active class from all color pills and add it to custom
+    const colorPills = document.querySelectorAll('.color-pill, .mobile-color-btn');
+    colorPills.forEach(pill => {
+        pill.classList.remove('active');
+    });
+    
+    // Find and activate the custom color pill
+    const customColorPill = document.querySelector('.c-custom, .mobile-color-btn[onclick*="openColorPicker"]');
+    if (customColorPill) {
+        customColorPill.classList.add('active');
+    }
+}
+
+function calculateComplementaryColor(color) {
+    // Convert hex to RGB
+    let r = 0, g = 0, b = 0;
+    if (color.length === 7) {
+        r = parseInt(color.substring(1, 3), 16);
+        g = parseInt(color.substring(3, 5), 16);
+        b = parseInt(color.substring(5, 7), 16);
+    }
+    
+    // Generate a complementary color by adjusting RGB values
+    r = Math.min(255, r + 50);
+    g = Math.min(255, g + 30);
+    b = Math.min(255, b + 70);
+    
+    // Ensure the color is not too light
+    if (r > 220 && g > 220 && b > 220) {
+        r = Math.max(0, r - 100);
+        g = Math.max(0, g - 100);
+        b = Math.max(0, b - 100);
+    }
+    
+    return `rgb(${r}, ${g}, ${b})`;
+}
