@@ -3,7 +3,10 @@
 <html b:css='false' b:defaultwidgetversion='2' b:layoutsVersion='3' b:responsive='true' b:templateUrl='indie.xml' b:templateVersion='1.0.0' expr:dir='data:blog.languageDirection' xmlns='http://www.w3.org/1999/xhtml' xmlns:b='http://www.google.com/2005/gml/b' xmlns:data='http://www.google.com/2005/gml/data' xmlns:expr='http://www.google.com/2005/gml/expr'>
   <head>
     <meta content='width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover' name='viewport'/>
+    <!-- Legacy Apple meta tag (deprecated) -->
     <meta content='yes' name='apple-mobile-web-app-capable'/>
+    <!-- Modern web app capable tag -->
+    <meta content='yes' name='mobile-web-app-capable'/>
     <meta content='black-translucent' name='apple-mobile-web-app-status-bar-style'/>
     <title><data:blog.pageTitle/></title>
     
@@ -2073,6 +2076,6 @@
     </div>
 
     <!-- External JavaScript for Santrilogy AI -->
-    <script src="https://cdn.jsdelivr.net/gh/santrilogyapp/santrilogy-ai@main/app.js"></script>
+    <script src="/optimized-assets/js/app.js"></script>
   </body>
 </html>
