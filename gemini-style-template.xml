@@ -1994,11 +1994,8 @@
               </div>
               <textarea class='input-field' id='userPrompt' oninput='handleInput()' onkeydown='handleKeyDown(event)' placeholder='Tanyakan sesuatu...' rows='1'/>
               <div class='input-right'>
-                <button class='send-mic-btn mic' id='sendMicBtn' onclick='handleSendMic()'>
-                  <i class='fas fa-microphone'/>
-                </button>
-                <button class='send-mic-btn send' id='sendBtn' onclick='sendMessage()' style='margin-left: 8px;'>
-                  <i class='fas fa-paper-plane'/>
+                <button class='send-mic-btn mic' id='actionBtn' onclick='handleActionClick()'>
+                  <i class='fas fa-microphone' id='actionIcon'/>
                 </button>
               </div>
             </div>
@@ -2644,9 +2641,74 @@
         if (el) el.remove();
     }
 
-    // Integrate with existing send functionality
+    // Dynamic Action Button functions
+    function handleInput() {
+        const input = document.getElementById('userPrompt');
+        const btn = document.getElementById('actionBtn');
+        const icon = document.getElementById('actionIcon');
+
+        // Auto resize
+        input.style.height = 'auto';
+        input.style.height = (input.scrollHeight) + 'px';
+        if(input.value === '') input.style.height = 'auto';
+
+        // Toggle Icon
+        if (input.value.trim().length > 0) {
+            btn.className = 'send-mic-btn send';
+            icon.className = 'fas fa-paper-plane';
+        } else {
+            btn.className = 'send-mic-btn mic';
+            icon.className = 'fas fa-microphone';
+        }
+    }
+
+    function handleActionClick() {
+        const input = document.getElementById('userPrompt');
+        if (input.value.trim().length > 0) {
+            sendMessage();
+        } else {
+            handleSendMic();
+        }
+    }
+
+    // Update sendMessage to reset button after sending
     function sendMessage() {
         handleUserSend();
+        // Reset button to microphone after sending
+        setTimeout(() => {
+            const btn = document.getElementById('actionBtn');
+            const icon = document.getElementById('actionIcon');
+            const input = document.getElementById('userPrompt');
+
+            if (input.value.trim().length === 0) {
+                btn.className = 'send-mic-btn mic';
+                icon.className = 'fas fa-microphone';
+            }
+        }, 100); // Small delay to allow the message to be processed
+    }
+
+    // Update handleUserSend with proper text parameter handling
+    async function handleUserSend() {
+        const inputField = document.getElementById('userPrompt');
+        const chatContainer = document.getElementById('main');
+
+        const text = inputField.value;
+        if (!text) return;
+
+        // 1. Tampilkan Chat User di UI
+        addBubble(text, 'user');
+        inputField.value = ''; // Kosongkan input
+        handleInput(); // Update the button state
+
+        // 2. Tampilkan Loading Skeleton
+        const loadingId = addLoadingBubble();
+
+        // 3. Panggil AI
+        const aiResponse = await chatWithSantrilogy(text);
+
+        // 4. Hapus Loading, Tampilkan Jawaban AI
+        removeLoadingBubble(loadingId);
+        addBubble(aiResponse, 'ai');
     }
     /*]]>*/
     </script>
