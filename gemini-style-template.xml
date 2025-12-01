@@ -1297,7 +1297,7 @@
 
       .modal-tools-grid {
         display: grid;
-        grid-template-columns: repeat(2, 1fr);
+        grid-template-columns: 1fr;
         gap: 10px;
       }
 
@@ -1842,25 +1842,25 @@
                       <h1>Santrilogy AI</h1>
                       <p>Hallo, saya Santrilogy AI, teman diskusi virtualmu. Mau diskusi apa hari ini?</p>
                       <div class='suggestions'>
-                        <div class='sug-card' onclick='askQuestion(&quot;Jelaskan hukum shalat jamak qasar&quot;)'>
-                          <div class='sug-icon'><i class='fas fa-mosque'/></div>
-                          <div class='sug-title'>Hukum Shalat</div>
-                          <div class='sug-desc'>Fikih shalat jamak &amp; qasar</div>
+                        <div class='sug-card' onclick='askQuestion(&quot;Buatkan RPP&quot;)'>
+                          <div class='sug-icon'><i class='fas fa-file-alt'/></div>
+                          <div class='sug-title'>Buatkan RPP</div>
+                          <div class='sug-desc'>Rencana Pelaksanaan Pembelajaran</div>
                         </div>
-                        <div class='sug-card' onclick='askQuestion(&quot;Apa saja rukun wudhu?&quot;)'>
-                          <div class='sug-icon'><i class='fas fa-droplet'/></div>
-                          <div class='sug-title'>Thaharah</div>
-                          <div class='sug-desc'>Wudhu, tayamum, bersuci</div>
+                        <div class='sug-card' onclick='askQuestion(&quot;Analisis Data&quot;)'>
+                          <div class='sug-icon'><i class='fas fa-chart-line'/></div>
+                          <div class='sug-title'>Analisis Data</div>
+                          <div class='sug-desc'>Uji statistik dan visualisasi data</div>
                         </div>
-                        <div class='sug-card' onclick='askQuestion(&quot;Terjemahkan bait alfiyah&quot;)'>
-                          <div class='sug-icon'><i class='fas fa-book-quran'/></div>
-                          <div class='sug-title'>Kitab Kuning</div>
-                          <div class='sug-desc'>Terjemah &amp; syarah kitab</div>
+                        <div class='sug-card' onclick='askQuestion(&quot;Kamus&quot;)'>
+                          <div class='sug-icon'><i class='fas fa-book'/></div>
+                          <div class='sug-title'>Kamus</div>
+                          <div class='sug-desc'>Terjemahan dan definisi kata</div>
                         </div>
-                        <div class='sug-card' onclick='askQuestion(&quot;Jelaskan rukun iman&quot;)'>
-                          <div class='sug-icon'><i class='fas fa-heart'/></div>
-                          <div class='sug-title'>Akidah</div>
-                          <div class='sug-desc'>Dasar-dasar keimanan</div>
+                        <div class='sug-card' onclick='askQuestion(&quot;Resume&quot;)'>
+                          <div class='sug-icon'><i class='fas fa-file-lines'/></div>
+                          <div class='sug-title'>Resume</div>
+                          <div class='sug-desc'>Ringkasan dokumen penting</div>
                         </div>
                       </div>
                     </div>
@@ -1963,7 +1963,7 @@
                     <span>Terjemah Kitab</span>
                   </div>
                   <div class='tool-item' onclick='useTool(&quot;irob&quot;)'>
-                    <i class='fas fa-diagram-project'/>
+                    <i class='fas fa-book-open'/>
                     <span>Analisis I&#39;rob</span>
                   </div>
                   <div class='tool-item' onclick='useTool(&quot;harokat&quot;)'>
@@ -2044,7 +2044,7 @@
               </div>
             </div>
             <div class='modal-tool-item' onclick='useTool(&quot;irob&quot;)'>
-              <div class='modal-tool-icon'><i class='fas fa-diagram-project'/></div>
+              <div class='modal-tool-icon'><i class='fas fa-book-open'/></div>
               <div class='modal-tool-info'>
                 <div class='modal-tool-name'>Analisis I&#39;rob</div>
                 <div class='modal-tool-desc'>Parsing nahwu shorof</div>
@@ -2238,6 +2238,7 @@
           recognition.continuous = false;
           recognition.interimResults = true;
           recognition.lang = 'id-ID'; // Set to Indonesian language
+          recognition.maxAlternatives = 1;
 
           recognition.onresult = function(event) {
             let transcript = '';
@@ -2257,7 +2258,21 @@
           };
 
           recognition.onend = function() {
-            stopListening();
+            // Don't automatically stop listening - let the user decide
+            // For mobile, we might need to restart in some cases
+            if (isListening) {
+              // On some mobile browsers, we need to restart recognition for continuous use
+              setTimeout(() => {
+                if (isListening && recognition) {
+                  try {
+                    recognition.start();
+                  } catch (e) {
+                    console.log('Could not restart recognition:', e);
+                    stopListening();
+                  }
+                }
+              }, 100);
+            }
           };
         } else {
           alert('Browser Anda tidak mendukung fitur Speech Recognition. Silakan gunakan browser modern seperti Chrome.');
@@ -2280,6 +2295,10 @@
             isListening = true;
           } catch (error) {
             console.error('Error starting recognition:', error);
+            // Mobile Safari and some other mobile browsers may require user gesture to enable speech recognition
+            if (error.message && error.message.includes('no-speech')) {
+              alert('Silakan ucapkan sesuatu. Jika tidak berfungsi, pastikan izin mikrofon telah diberikan.');
+            }
             stopListening();
           }
         }
@@ -2288,7 +2307,11 @@
       // Function to stop voice recording
       function stopListening() {
         if (recognition && isListening) {
-          recognition.stop();
+          try {
+            recognition.stop();
+          } catch (e) {
+            console.log('Recognition stop error:', e);
+          }
           document.getElementById('sendMicBtn').innerHTML = '<i class="fas fa-microphone"/>';
           document.getElementById('sendMicBtn').classList.remove('send');
           document.getElementById('sendMicBtn').classList.add('mic');
@@ -2443,6 +2466,11 @@
 
         // Setup swipe gestures
         setupSwipeGesture();
+
+        // Scroll to top on initial page load to show welcome screen
+        setTimeout(() => {
+          window.scrollTo(0, 0);
+        }, 100);
       });
 
       function setupSwipeGesture() {
