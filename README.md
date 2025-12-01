@@ -72,6 +72,22 @@ santrilogy-ai/
    <script src="./optimized-assets/js/app.js"></script>
    ```
 
+## GitHub Setup Automation Script
+
+We provide a setup script to automate the GitHub publishing process:
+
+1. Make the script executable:
+   ```bash
+   chmod +x setup-github.sh
+   ```
+
+2. Run the script:
+   ```bash
+   ./setup-github.sh
+   ```
+
+3. Follow the prompts to enter your repository URL
+
 ## Usage
 
 1. **Upload to Blogger**:
