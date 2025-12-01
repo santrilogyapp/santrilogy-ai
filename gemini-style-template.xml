@@ -2075,7 +2075,7 @@
       </div>
     </div>
 
-    <!-- External JavaScript for Santriology AI -->
-    <script src="https://cdn.jsdelivr.net/gh/santrilogyapp/santrilogy-ai@main/optimized-assets/js/app.js"></script>
+    <!-- External JavaScript for Santrilogy AI -->
+    <script src="./optimized-assets/js/app.js"></script>
   </body>
 </html>
