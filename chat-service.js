@@ -1,26 +1,27 @@
 // chatService.js - Fungsi-fungsi utama untuk manajemen chat Santrilogy AI
 // Menggabungkan fungsionalitas dari Supabase dan Gemini
 
-import { 
-  createChatSession, 
-  getUserChatSessions, 
-  getChatSession, 
-  updateChatSessionTitle, 
+import {
+  createChatSession,
+  getUserChatSessions,
+  getChatSession,
+  updateChatSessionTitle,
   deleteChatSession,
   saveMessage,
   getChatMessages,
-  getUserStats
-} from './chat-manager';
+  getUserStats,
+  saveSpecialFeatureResult
+} from './chat-manager.js';
 
-import { 
-  generateContent, 
-  generateChatContent, 
+import {
+  generateContent,
+  generateChatContent,
   generateIslamicResponse,
   generateTasykil,
   generateIrob,
   generateMantiq,
   generateRPPFromArabicText
-} from './gemini-connector';
+} from './gemini-connector.js';
 
 // Fungsi untuk membuat sesi chat baru lengkap dengan pesan awal
 export const startNewChat = async (userId, initialPrompt = null) => {
@@ -28,31 +29,31 @@ export const startNewChat = async (userId, initialPrompt = null) => {
     // Buat sesi baru
     const sessionTitle = initialPrompt ? initialPrompt.substring(0, 50) + (initialPrompt.length > 50 ? '...' : '') : 'New Chat';
     const sessionResult = await createChatSession(userId, sessionTitle);
-    
+
     if (!sessionResult.success) {
       throw new Error(`Failed to create session: ${sessionResult.error}`);
     }
-    
+
     const sessionId = sessionResult.data.id;
-    
+
     // Jika ada prompt awal, proses dan simpan sebagai pesan pertama
     if (initialPrompt) {
       // Simpan pesan pengguna
       const userMessageResult = await saveMessage(sessionId, userId, 'user', initialPrompt);
       if (!userMessageResult.success) {
-        console.error('Failed to save user message:', userMessageResult.error);
+        console.warn('Failed to save user message:', userMessageResult.error);
       }
-      
+
       // Dapatkan respons dari AI
       const aiResponse = await generateIslamicResponse(initialPrompt);
-      
+
       if (aiResponse.success) {
         // Simpan pesan AI
         const aiMessageResult = await saveMessage(sessionId, userId, 'assistant', aiResponse.data.text);
         if (!aiMessageResult.success) {
-          console.error('Failed to save AI message:', aiMessageResult.error);
+          console.warn('Failed to save AI message:', aiMessageResult.error);
         }
-        
+
         return {
           success: true,
           data: {
@@ -69,13 +70,13 @@ export const startNewChat = async (userId, initialPrompt = null) => {
         };
       }
     }
-    
+
     return {
       success: true,
       data: { session: sessionResult.data }
     };
   } catch (error) {
-    console.error('Start new chat error:', error);
+    console.error('Start new chat error:', error.message);
     return { success: false, error: error.message };
   }
 };
@@ -85,39 +86,39 @@ export const sendMessage = async (sessionId, userId, message, options = {}) => {
   try {
     // Simpan pesan pengguna
     const userMessageResult = await saveMessage(sessionId, userId, 'user', message);
-    
+
     if (!userMessageResult.success) {
       throw new Error(`Failed to save user message: ${userMessageResult.error}`);
     }
-    
+
     // Dapatkan riwayat percakapan sebelumnya
     const historyResult = await getChatMessages(sessionId, userId);
-    
+
     if (!historyResult.success) {
       throw new Error(`Failed to get chat history: ${historyResult.error}`);
     }
-    
+
     // Ambil beberapa pesan terakhir sebagai konteks (untuk menghindari melebihi batas token)
     const recentHistory = historyResult.data.slice(-10); // Ambil 10 pesan terakhir
     const formattedHistory = recentHistory.map(msg => ({
       role: msg.role,
       content: msg.content
     }));
-    
+
     // Generate respons dari AI
     const response = await generateChatContent(formattedHistory, message, options);
-    
+
     if (!response.success) {
       throw new Error(`Failed to get AI response: ${response.error}`);
     }
-    
+
     // Simpan respons AI
     const aiMessageResult = await saveMessage(sessionId, userId, 'assistant', response.data.text);
-    
+
     if (!aiMessageResult.success) {
-      console.error('Failed to save AI message:', aiMessageResult.error);
+      console.warn('Failed to save AI message:', aiMessageResult.error);
     }
-    
+
     return {
       success: true,
       data: {
@@ -127,7 +128,7 @@ export const sendMessage = async (sessionId, userId, message, options = {}) => {
       }
     };
   } catch (error) {
-    console.error('Send message error:', error);
+    console.error('Send message error:', error.message);
     return { success: false, error: error.message };
   }
 };
@@ -137,13 +138,13 @@ export const sendSpecializedMessage = async (sessionId, userId, message, feature
   try {
     // Simpan pesan pengguna
     const userMessageResult = await saveMessage(sessionId, userId, 'user', message);
-    
+
     if (!userMessageResult.success) {
       throw new Error(`Failed to save user message: ${userMessageResult.error}`);
     }
-    
+
     let response;
-    
+
     // Berdasarkan tipe fitur, gunakan fungsi yang sesuai
     switch(featureType) {
       case 'tasykil':
@@ -163,18 +164,18 @@ export const sendSpecializedMessage = async (sessionId, userId, message, feature
         response = await generateIslamicResponse(message);
         break;
     }
-    
+
     if (!response.success) {
       throw new Error(`Failed to get specialized response: ${response.error}`);
     }
-    
+
     // Simpan respons AI
     const aiMessageResult = await saveMessage(sessionId, userId, 'assistant', response.data.text);
-    
+
     if (!aiMessageResult.success) {
-      console.error('Failed to save AI message:', aiMessageResult.error);
+      console.warn('Failed to save AI message:', aiMessageResult.error);
     }
-    
+
     return {
       success: true,
       data: {
@@ -184,7 +185,7 @@ export const sendSpecializedMessage = async (sessionId, userId, message, feature
       }
     };
   } catch (error) {
-    console.error('Send specialized message error:', error);
+    console.error('Send specialized message error:', error.message);
     return { success: false, error: error.message };
   }
 };
@@ -194,18 +195,18 @@ export const getFullConversation = async (sessionId, userId) => {
   try {
     // Dapatkan informasi sesi
     const sessionResult = await getChatSession(sessionId, userId);
-    
+
     if (!sessionResult.success) {
       throw new Error(`Failed to get session: ${sessionResult.error}`);
     }
-    
+
     // Dapatkan pesan-pesan
     const messagesResult = await getChatMessages(sessionId, userId);
-    
+
     if (!messagesResult.success) {
       throw new Error(`Failed to get messages: ${messagesResult.error}`);
     }
-    
+
     return {
       success: true,
       data: {
@@ -214,7 +215,7 @@ export const getFullConversation = async (sessionId, userId) => {
       }
     };
   } catch (error) {
-    console.error('Get full conversation error:', error);
+    console.error('Get full conversation error:', error.message);
     return { success: false, error: error.message };
   }
 };
@@ -244,7 +245,6 @@ export const createRPPFromArabicText = async (sessionId, userId, arabicText, les
     }
     
     // Simpan juga ke tabel hasil fitur khusus
-    import { saveSpecialFeatureResult } from './chat-manager';
     await saveSpecialFeatureResult(userId, 'rpp', arabicText, rppResponse.data.text, {
       lessonTitle,
       level
@@ -289,7 +289,6 @@ export const performTasykil = async (sessionId, userId, arabicText) => {
     }
     
     // Simpan juga ke tabel hasil fitur khusus
-    import { saveSpecialFeatureResult } from './chat-manager';
     await saveSpecialFeatureResult(userId, 'tasykil', arabicText, tasykilResponse.data.text);
     
     return {
@@ -331,7 +330,6 @@ export const performIrob = async (sessionId, userId, arabicText) => {
     }
     
     // Simpan juga ke tabel hasil fitur khusus
-    import { saveSpecialFeatureResult } from './chat-manager';
     await saveSpecialFeatureResult(userId, 'irob', arabicText, irobResponse.data.text);
     
     return {
@@ -373,7 +371,6 @@ export const performMantiqAnalysis = async (sessionId, userId, query) => {
     }
     
     // Simpan juga ke tabel hasil fitur khusus
-    import { saveSpecialFeatureResult } from './chat-manager';
     await saveSpecialFeatureResult(userId, 'mantiq', query, mantiqResponse.data.text);
     
     return {

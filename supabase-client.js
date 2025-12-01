@@ -3,17 +3,27 @@
 import { createClient } from '@supabase/supabase-js';
 
 // Konfigurasi Supabase
-const SUPABASE_URL = process.env.SUPABASE_URL || 'https://jbbathydxvpgmgtauadm.supabase.co';
-const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpiYmF0aHlkeHZwZ21ndGF1YWRtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQ1MTMyNjMsImV4cCI6MjA4MDA4OTI2M30.9uUtMwX4G5gmhbFHv1l7DgNTedQtiWqSzZ_VgWYzFAo';
+const SUPABASE_URL = process.env.SUPABASE_URL;
+const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY;
+
+if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
+  console.warn('Supabase configuration missing. Please set SUPABASE_URL and SUPABASE_ANON_KEY in environment variables.');
+}
 
 // Inisialisasi client Supabase
-const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+const supabase = SUPABASE_URL && SUPABASE_ANON_KEY
+  ? createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
+  : null;
 
 // Fungsi autentikasi
 export const auth = {
   // Registrasi pengguna baru
   register: async (email, password, userData = {}) => {
     try {
+      if (!supabase) {
+        throw new Error('Supabase client not initialized. Check configuration.');
+      }
+
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
@@ -30,7 +40,7 @@ export const auth = {
 
       // Simpan data pengguna tambahan ke tabel users
       if (data.user) {
-        await supabase
+        const { error: insertError } = await supabase
           .from('users')
           .insert([{
             id: data.user.id,
@@ -39,11 +49,15 @@ export const auth = {
             full_name: userData.full_name || userData.username || email.split('@')[0],
             avatar_url: userData.avatar_url || null
           }]);
+
+        if (insertError) {
+          console.warn('Failed to save user data to users table:', insertError.message);
+        }
       }
 
       return { success: true, data };
     } catch (error) {
-      console.error('Registration error:', error);
+      console.error('Registration error:', error.message);
       return { success: false, error: error.message };
     }
   },
@@ -51,6 +65,10 @@ export const auth = {
   // Login pengguna
   login: async (email, password) => {
     try {
+      if (!supabase) {
+        throw new Error('Supabase client not initialized. Check configuration.');
+      }
+
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password
@@ -60,7 +78,7 @@ export const auth = {
 
       return { success: true, data };
     } catch (error) {
-      console.error('Login error:', error);
+      console.error('Login error:', error.message);
       return { success: false, error: error.message };
     }
   },
@@ -68,16 +86,22 @@ export const auth = {
   // Login dengan Google
   loginWithGoogle: async () => {
     try {
+      if (!supabase) {
+        throw new Error('Supabase client not initialized. Check configuration.');
+      }
+
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: window.location.origin
+          redirectTo: window.location.origin || 'http://localhost:3000'
         }
       });
 
       if (error) throw error;
+
+      return { success: true };
     } catch (error) {
-      console.error('Google login error:', error);
+      console.error('Google login error:', error.message);
       return { success: false, error: error.message };
     }
   },
@@ -85,13 +109,17 @@ export const auth = {
   // Logout pengguna
   logout: async () => {
     try {
+      if (!supabase) {
+        throw new Error('Supabase client not initialized. Check configuration.');
+      }
+
       const { error } = await supabase.auth.signOut();
-      
+
       if (error) throw error;
-      
+
       return { success: true };
     } catch (error) {
-      console.error('Logout error:', error);
+      console.error('Logout error:', error.message);
       return { success: false, error: error.message };
     }
   },
@@ -99,15 +127,19 @@ export const auth = {
   // Reset password
   resetPassword: async (email) => {
     try {
+      if (!supabase) {
+        throw new Error('Supabase client not initialized. Check configuration.');
+      }
+
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${window.location.origin}/update-password`
+        redirectTo: `${window.location.origin || 'http://localhost:3000'}/update-password`
       });
 
       if (error) throw error;
 
       return { success: true };
     } catch (error) {
-      console.error('Password reset error:', error);
+      console.error('Password reset error:', error.message);
       return { success: false, error: error.message };
     }
   },
@@ -143,6 +175,10 @@ export const auth = {
   // Update profil pengguna
   updateProfile: async (profileData) => {
     try {
+      if (!supabase) {
+        throw new Error('Supabase client not initialized. Check configuration.');
+      }
+
       const user = await auth.getCurrentUser();
       if (!user) throw new Error('User not authenticated');
 
@@ -164,7 +200,7 @@ export const auth = {
 
       return { success: true };
     } catch (error) {
-      console.error('Update profile error:', error);
+      console.error('Update profile error:', error.message);
       return { success: false, error: error.message };
     }
   }
@@ -172,13 +208,11 @@ export const auth = {
 
 // Event listener untuk perubahan auth state
 supabase.auth.onAuthStateChange((event, session) => {
-  console.log(`Auth state changed: ${event}`);
-  
   // Anda bisa menambahkan logika tambahan di sini saat auth state berubah
   if (event === 'SIGNED_IN') {
-    console.log('User signed in:', session?.user?.email);
+    // User signed in - tambahkan logika jika diperlukan
   } else if (event === 'SIGNED_OUT') {
-    console.log('User signed out');
+    // User signed out - tambahkan logika jika diperlukan
   }
 });
 

@@ -1,20 +1,23 @@
 // specializedFeatures.js - Implementasi fitur-fitur khusus Santrilogy AI
 // Termasuk Tasykil, I'rob, Mantiq, dan fitur-fitur lainnya
 
-import { 
+import {
   saveSpecialFeatureResult,
   getSpecialFeatureResults,
   saveBookSearchHistory,
   getBookSearchHistory
-} from './chat-manager';
+} from './chat-manager.js';
 
 import {
   generateTasykil,
   generateIrob,
   generateMantiq,
   generateRPPFromArabicText,
-  generateIslamicResponse
-} from './gemini-connector';
+  generateIslamicResponse,
+  generateContent
+} from './gemini-connector.js';
+
+import config from './config.js';
 
 // Fungsi untuk melakukan tasykil (penambahan harakat) pada teks Arab
 export const tasykilText = async (userId, arabicText) => {
@@ -284,34 +287,34 @@ export const translateArabicText = async (userId, arabicText, targetLanguage = '
     }
 
     const translationPrompt = `Terjemahkan teks Arab berikut ke bahasa ${targetLanguage === 'id' ? 'Indonesia' : 'Inggris'}:
-    
+
     Teks Arab: ${arabicText}
-    
+
     Berikan terjemahan yang akurat dan kontekstual, serta jika memungkinkan sertakan catatan kecil tentang makna penting.`;
 
-    const result = await generateContent(translationPrompt, { 
-      modelName: 'gemini-1.5-pro',
+    const result = await generateContent(translationPrompt, {
+      modelName: config.GEMINI.PRO_MODEL,
       temperature: 0.3
     });
-    
+
     if (!result.success) {
       throw new Error(`Translation failed: ${result.error}`);
     }
 
     // Simpan hasil ke database
     const saveResult = await saveSpecialFeatureResult(
-      userId, 
-      'translation', 
-      arabicText, 
+      userId,
+      'translation',
+      arabicText,
       result.data.text,
-      { 
+      {
         targetLanguage,
-        timestamp: new Date().toISOString() 
+        timestamp: new Date().toISOString()
       }
     );
 
     if (!saveResult.success) {
-      console.error('Failed to save translation result:', saveResult.error);
+      console.warn('Failed to save translation result:', saveResult.error);
     }
 
     return {
@@ -324,7 +327,7 @@ export const translateArabicText = async (userId, arabicText, targetLanguage = '
       }
     };
   } catch (error) {
-    console.error('Arabic translation error:', error);
+    console.error('Arabic translation error:', error.message);
     return { success: false, error: error.message };
   }
 };
@@ -402,34 +405,34 @@ export const summarizeText = async (userId, text, maxSentences = 5) => {
     }
 
     const summaryPrompt = `Buatkan ringkasan yang padat dan akurat dari teks berikut, maksimal ${maxSentences} kalimat:
-    
+
     Teks: ${text}
-    
+
     Pastikan ringkasan mencakup poin-poin penting dan informasi utama dari teks.`;
 
-    const result = await generateContent(summaryPrompt, { 
-      modelName: 'gemini-1.5-flash',
+    const result = await generateContent(summaryPrompt, {
+      modelName: config.GEMINI.DEFAULT_MODEL,
       temperature: 0.4
     });
-    
+
     if (!result.success) {
       throw new Error(`Summarization failed: ${result.error}`);
     }
 
     // Simpan hasil ke database
     const saveResult = await saveSpecialFeatureResult(
-      userId, 
-      'summarization', 
-      text, 
+      userId,
+      'summarization',
+      text,
       result.data.text,
-      { 
+      {
         maxSentences,
-        timestamp: new Date().toISOString() 
+        timestamp: new Date().toISOString()
       }
     );
 
     if (!saveResult.success) {
-      console.error('Failed to save summarization result:', saveResult.error);
+      console.warn('Failed to save summarization result:', saveResult.error);
     }
 
     return {
@@ -442,7 +445,7 @@ export const summarizeText = async (userId, text, maxSentences = 5) => {
       }
     };
   } catch (error) {
-    console.error('Text summarization error:', error);
+    console.error('Text summarization error:', error.message);
     return { success: false, error: error.message };
   }
 };
@@ -454,34 +457,34 @@ export const formatArabicText = async (userId, arabicText) => {
       throw new Error('Invalid Arabic text provided for formatting');
     }
 
-    const formatPrompt = `Format ulang teks Arab berikut agar lebih mudah dibaca dan dipahami, 
-    dengan menambahkan spasi yang tepat, membagi menjadi paragraf jika perlu, 
+    const formatPrompt = `Format ulang teks Arab berikut agar lebih mudah dibaca dan dipahami,
+    dengan menambahkan spasi yang tepat, membagi menjadi paragraf jika perlu,
     dan mempertahankan makna aslinya:
-    
+
     Teks: ${arabicText}`;
 
-    const result = await generateContent(formatPrompt, { 
-      modelName: 'gemini-1.5-pro',
+    const result = await generateContent(formatPrompt, {
+      modelName: config.GEMINI.PRO_MODEL,
       temperature: 0.1 // Sangat rendah untuk hasil yang lebih terstruktur
     });
-    
+
     if (!result.success) {
       throw new Error(`Text formatting failed: ${result.error}`);
     }
 
     // Simpan hasil ke database
     const saveResult = await saveSpecialFeatureResult(
-      userId, 
-      'formatting', 
-      arabicText, 
+      userId,
+      'formatting',
+      arabicText,
       result.data.text,
-      { 
-        timestamp: new Date().toISOString() 
+      {
+        timestamp: new Date().toISOString()
       }
     );
 
     if (!saveResult.success) {
-      console.error('Failed to save formatting result:', saveResult.error);
+      console.warn('Failed to save formatting result:', saveResult.error);
     }
 
     return {
@@ -493,7 +496,7 @@ export const formatArabicText = async (userId, arabicText) => {
       }
     };
   } catch (error) {
-    console.error('Arabic text formatting error:', error);
+    console.error('Arabic text formatting error:', error.message);
     return { success: false, error: error.message };
   }
 };
@@ -506,37 +509,37 @@ export const validateArabicGrammar = async (userId, arabicText) => {
     }
 
     const validationPrompt = `Lakukan validasi tata bahasa Arab terhadap teks berikut:
-    
+
     Teks: ${arabicText}
-    
+
     Identifikasi:
     1. Kesalahan tata bahasa jika ada
     2. Ketepatan kaidah nahwu dan sharaf
     3. Saran perbaikan jika diperlukan
     4. Penjelasan singkat tentang aturan yang terlibat`;
 
-    const result = await generateContent(validationPrompt, { 
-      modelName: 'gemini-1.5-pro',
+    const result = await generateContent(validationPrompt, {
+      modelName: config.GEMINI.PRO_MODEL,
       temperature: 0.2 // Rendah untuk hasil yang lebih akurat
     });
-    
+
     if (!result.success) {
       throw new Error(`Grammar validation failed: ${result.error}`);
     }
 
     // Simpan hasil ke database
     const saveResult = await saveSpecialFeatureResult(
-      userId, 
-      'grammar_validation', 
-      arabicText, 
+      userId,
+      'grammar_validation',
+      arabicText,
       result.data.text,
-      { 
-        timestamp: new Date().toISOString() 
+      {
+        timestamp: new Date().toISOString()
       }
     );
 
     if (!saveResult.success) {
-      console.error('Failed to save grammar validation result:', saveResult.error);
+      console.warn('Failed to save grammar validation result:', saveResult.error);
     }
 
     return {
@@ -548,7 +551,7 @@ export const validateArabicGrammar = async (userId, arabicText) => {
       }
     };
   } catch (error) {
-    console.error('Arabic grammar validation error:', error);
+    console.error('Arabic grammar validation error:', error.message);
     return { success: false, error: error.message };
   }
 };

@@ -3,17 +3,25 @@
   "version": "1.0.0",
   "description": "Santrilogy AI frontend with Supabase integration",
   "main": "gemini-style-template.xml",
+  "type": "module",
   "scripts": {
     "download-deps": "node download-dependencies.js",
     "test": "node test-template.html"
   },
   "dependencies": {
+    "@google/generative-ai": "^0.24.1",
     "@supabase/supabase-js": "^2.45.1",
-    "marked": "^14.1.0",
-    "mermaid": "^10.8.0",
-    "highlight.js": "^11.9.0"
+    "highlight.js": "^11.11.1",
+    "marked": "^14.1.4",
+    "mermaid": "^10.9.5"
   },
-  "keywords": ["santrilogy", "ai", "islamic", "frontend", "supabase"],
+  "keywords": [
+    "santrilogy",
+    "ai",
+    "islamic",
+    "frontend",
+    "supabase"
+  ],
   "author": "Santrilogy AI",
   "license": "MIT"
 }

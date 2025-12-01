@@ -2530,10 +2530,10 @@
     </div>
 
     <!-- External Libraries (Preload for performance) -->
-    <link rel="preload" href='/optimized-assets/js/marked/marked.min.js' as="script"/>
-    <link rel="preload" href='/optimized-assets/js/mermaid/mermaid.min.js' as="script"/>
-    <link rel="preload" href='/optimized-assets/js/highlight.js/highlight.min.js' as="script"/>
-    <link rel="preload" href='/optimized-assets/js/supabase/supabase-js@2.js' as="script"/>
+    <link rel="preload" href='/assets/js/marked/marked.min.js' as="script"/>
+    <link rel="preload" href='/assets/js/mermaid/mermaid.min.js' as="script"/>
+    <link rel="preload" href='/assets/js/highlight.js/highlight.min.js' as="script"/>
+    <link rel="preload" href='/assets/js/supabase/supabase-js@2.js' as="script"/>
 
     <!-- Core Santrilogy functionality (inlined for fastest execution) -->
     <script>
@@ -2550,11 +2550,19 @@
         const SUPABASE_ANON_KEY = document.querySelector('meta[name="supabase-anon-key"]')?.content || 'YOUR_SUPABASE_ANON_KEY';
 
         // Inisialisasi client Supabase
-        const supabase = typeof supabase !== 'undefined' ?
-            supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY) : null;
-
-    // Inisialisasi client Supabase
-    const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        let supabaseInstance = null;
+        if (typeof window.supabase !== 'undefined') {
+            supabaseInstance = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        } else if (typeof supabase !== 'undefined') {
+            supabaseInstance = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        } else {
+            // Dynamically load Supabase if not available
+            if (typeof window.supabase === 'undefined' && typeof window.createClient === 'undefined') {
+                console.warn('Supabase not available, attempting to load dynamically');
+            }
+            supabaseInstance = null;
+        }
+        const supabase = supabaseInstance;
 
     // Fungsi untuk mengatur konfigurasi Supabase dari luar (jika diperlukan)
     window.setSupabaseConfig = function(url, anonKey) {
@@ -3881,7 +3889,17 @@
             };
 
             console.log('Santrilogy AI Status:', window.santrilogyStatus);
-        });
+
+            // Export SantrilogyAPI to window for global access
+            window.SantrilogyAPI = SantrilogyAPI;
+
+            // Return the API object to be accessible through the namespace
+            return {
+                supabase: supabase,
+                SantrilogyAPI: SantrilogyAPI,
+                callSantrilogyBackend: callSantrilogyBackend
+            };
+        })();
         //]]>
     </script>
 

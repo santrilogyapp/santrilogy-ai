@@ -1,14 +1,18 @@
-// chatManager.js - Fungsi-fungsi untuk manajemen percakapan dan pesan Santrilogy AI
+// chatManager.js - Fungsi-fungsi untuk manajmen percakapan dan pesan Santrilogy AI
 
-import supabase from './supabase-client';
+import supabase from './supabase-client.js';
 
 // Fungsi untuk membuat sesi percakapan baru
 export const createChatSession = async (userId, title = 'New Chat') => {
   try {
+    if (!supabase) {
+      return { success: false, error: 'Supabase client not initialized. Check configuration.' };
+    }
+
     const { data, error } = await supabase
       .from('chat_sessions')
-      .insert([{ 
-        user_id: userId, 
+      .insert([{
+        user_id: userId,
         title: title,
         metadata: { created_with: 'santrilogy-ai' }
       }])
@@ -19,7 +23,7 @@ export const createChatSession = async (userId, title = 'New Chat') => {
 
     return { success: true, data };
   } catch (error) {
-    console.error('Create chat session error:', error);
+    console.error('Create chat session error:', error.message);
     return { success: false, error: error.message };
   }
 };
@@ -27,13 +31,17 @@ export const createChatSession = async (userId, title = 'New Chat') => {
 // Fungsi untuk mendapatkan daftar sesi percakapan pengguna
 export const getUserChatSessions = async (userId, limit = 50, offset = 0) => {
   try {
+    if (!supabase) {
+      return { success: false, error: 'Supabase client not initialized. Check configuration.' };
+    }
+
     const { data, error } = await supabase
       .from('chat_sessions')
       .select(`
-        id, 
-        title, 
-        created_at, 
-        updated_at, 
+        id,
+        title,
+        created_at,
+        updated_at,
         metadata,
         messages(count)
       `)
@@ -44,14 +52,14 @@ export const getUserChatSessions = async (userId, limit = 50, offset = 0) => {
     if (error) throw error;
 
     // Tambahkan jumlah pesan ke setiap sesi
-    const sessionsWithMessageCount = data.map(session => ({
+    const sessionsWithMessageCount = data && Array.isArray(data) ? data.map(session => ({
       ...session,
       messageCount: session.messages?.[0]?.count || 0
-    }));
+    })) : [];
 
     return { success: true, data: sessionsWithMessageCount };
   } catch (error) {
-    console.error('Get user chat sessions error:', error);
+    console.error('Get user chat sessions error:', error.message);
     return { success: false, error: error.message };
   }
 };
@@ -119,18 +127,26 @@ export const deleteChatSession = async (sessionId, userId) => {
 // Fungsi untuk menyimpan pesan baru
 export const saveMessage = async (sessionId, userId, role, content, parentMessageId = null) => {
   try {
+    if (!supabase) {
+      return { success: false, error: 'Supabase client not initialized. Check configuration.' };
+    }
+
     // Perbarui waktu terakhir sesi diakses
-    await supabase
+    const { error: sessionUpdateError } = await supabase
       .from('chat_sessions')
       .update({ updated_at: new Date().toISOString() })
       .eq('id', sessionId)
       .eq('user_id', userId);
 
+    if (sessionUpdateError) {
+      console.warn('Warning: Failed to update session timestamp:', sessionUpdateError.message);
+    }
+
     const { data, error } = await supabase
       .from('messages')
-      .insert([{ 
-        session_id: sessionId, 
-        user_id: userId, 
+      .insert([{
+        session_id: sessionId,
+        user_id: userId,
         role: role, // 'user' atau 'assistant'
         content: content,
         parent_message_id: parentMessageId
@@ -142,7 +158,7 @@ export const saveMessage = async (sessionId, userId, role, content, parentMessag
 
     return { success: true, data };
   } catch (error) {
-    console.error('Save message error:', error);
+    console.error('Save message error:', error.message);
     return { success: false, error: error.message };
   }
 };
