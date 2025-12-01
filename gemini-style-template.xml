@@ -139,7 +139,7 @@
         background: var(--gradient-1);
         border-radius: 50%;
         position: absolute;
-        box-shadow: 0 0 15px rgba(99,102,241,0.5);
+        box-shadow: 0 0 15px var(--accent);
         animation: pulse 2s ease-in-out infinite;
       }
 
@@ -529,6 +529,7 @@
       .color-pill.c-purple { background: #8b5cf6; }
       .color-pill.c-pink { background: #ec4899; }
       .color-pill.c-orange { background: #f97316; }
+      .color-pill.c-custom { background: linear-gradient(45deg, #6366f1, #8b5cf6); }
 
       /* Size Buttons */
       .size-btns {
@@ -550,6 +551,34 @@
 
       .size-btn:hover { border-color: var(--accent); color: var(--accent); }
       .size-btn.active { background: var(--accent-soft); border-color: var(--accent); color: var(--accent); }
+
+      /* ============================================
+         MORE DROPDOWN
+         ============================================ */
+
+      .more-dropdown {
+        position: absolute;
+        top: var(--header-h);
+        right: 16px;
+        background: var(--bg-modal);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-md);
+        box-shadow: var(--shadow-xl);
+        opacity: 0;
+        visibility: hidden;
+        transform: translateY(10px) scale(0.95);
+        transform-origin: top right;
+        transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+        z-index: 500;
+        overflow: hidden;
+        min-width: 220px;
+      }
+
+      .more-dropdown.show {
+        opacity: 1;
+        visibility: visible;
+        transform: translateY(0) scale(1);
+      }
 
       /* ============================================
          MAIN
@@ -907,6 +936,10 @@
         padding-bottom: calc(16px + var(--safe-bottom));
         z-index: 100;
         transition: left 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+      }
+
+      [data-theme="dark"] .input-area {
+        background: linear-gradient(180deg, transparent 0%, var(--bg-secondary) 100%);
       }
 
       .sidebar.collapsed ~ .main .input-area { left: 0; }
@@ -1616,6 +1649,8 @@
                   <button class='color-pill c-purple' data-accent='purple' onclick='setAccent(this)'/>
                   <button class='color-pill c-pink' data-accent='pink' onclick='setAccent(this)'/>
                   <button class='color-pill c-orange' data-accent='orange' onclick='setAccent(this)'/>
+                  <button class='color-pill c-custom' onclick='openColorPicker()' title='Custom Color'>
+                    <i class='fas fa-palette' style='font-size: 10px; color: white;'/></button>
                 </div>
               </div>
 
@@ -1678,14 +1713,44 @@
             </div>
           </div>
           <div class='header-right'>
-            <button class='icon-btn' title='Share'>
-              <i class='fas fa-share-nodes'/>
-            </button>
-            <button class='icon-btn' title='More'>
+            <button class='icon-btn' title='More' onclick='toggleMoreDropdown()'>
               <i class='fas fa-ellipsis-vertical'/>
             </button>
           </div>
         </header>
+
+        <!-- More Dropdown Menu -->
+        <div class='more-dropdown' id='moreDropdown' onclick='closeMoreDropdown()'>
+          <div class='more-dropdown-content' onclick='event.stopPropagation()'>
+            <div class='dropdown-item' onclick='shareCurrentPage()'>
+              <div class='dropdown-item-label'>
+                <i class='fas fa-share-alt'/>
+                <span>Share</span>
+              </div>
+            </div>
+            <div class='dropdown-divider'/>
+            <div class='dropdown-item' onclick='downloadApp()'>
+              <div class='dropdown-item-label'>
+                <i class='fas fa-download'/>
+                <span>Download App</span>
+              </div>
+            </div>
+            <div class='dropdown-divider'/>
+            <div class='dropdown-item' onclick='showPrivacyPolicy()'>
+              <div class='dropdown-item-label'>
+                <i class='fas fa-lock'/>
+                <span>Privacy Policy</span>
+              </div>
+            </div>
+            <div class='dropdown-divider'/>
+            <div class='dropdown-item' onclick='showTermsConditions()'>
+              <div class='dropdown-item-label'>
+                <i class='fas fa-file-contract'/>
+                <span>Terms & Conditions</span>
+              </div>
+            </div>
+          </div>
+        </div>
 
         <div class='chat-area' id='chatArea'>
           <div class='chat-container'>
@@ -1754,7 +1819,7 @@
                         </div>
                       </div>
                       <h1>Santrilogy AI</h1>
-                      <p>Asisten pintar untuk kajian Islam, fikih, dan kitab kuning</p>
+                      <p>Hallo, saya Santrilogy AI, teman diskusi virtualmu. Mau diskusi apa hari ini?</p>
                       <div class='suggestions'>
                         <div class='sug-card' onclick='askQuestion(&quot;Jelaskan hukum shalat jamak qasar&quot;)'>
                           <div class='sug-icon'><i class='fas fa-mosque'/></div>
@@ -1902,7 +1967,7 @@
 
             <div class='input-box'>
               <div class='input-left'>
-                <button class='input-btn plus' id='plusBtn' onclick='toggleTools()' title='Tools'>
+                <button class='input-btn plus' id='plusBtn' onclick='toggleToolsResponsive()' title='Tools'>
                   <i class='fas fa-plus-circle'/>
                 </button>
               </div>
@@ -2030,6 +2095,8 @@
             <button class='mobile-color-btn' data-accent='purple' onclick='setAccent(this)' style='background: #8b5cf6;'/>
             <button class='mobile-color-btn' data-accent='pink' onclick='setAccent(this)' style='background: #ec4899;'/>
             <button class='mobile-color-btn' data-accent='orange' onclick='setAccent(this)' style='background: #f97316;'/>
+            <button class='mobile-color-btn' onclick='openColorPicker()' style='background: linear-gradient(45deg, #6366f1, #8b5cf6);' title='Custom Color'>
+              <i class='fas fa-palette' style='font-size: 10px; color: white;'/></button>
           </div>
         </div>
 
@@ -2075,7 +2142,332 @@
       </div>
     </div>
 
+    <!-- Hidden color picker input -->
+    <input type="color" id="customColorPicker" style="display: none;" onchange="applyCustomColor(this.value)"/>
+
+    <!-- Custom theme color functions -->
+    <script>
+      function openColorPicker() {
+        document.getElementById('customColorPicker').click();
+      }
+
+      function applyCustomColor(color) {
+        // Update --accent variable
+        document.documentElement.style.setProperty('--accent', color);
+
+        // Generate a complementary color for --accent-2
+        const accent2 = calculateComplementaryColor(color);
+        document.documentElement.style.setProperty('--accent-2', accent2);
+
+        // Update --gradient-1 based on the custom color
+        const gradient = `linear-gradient(135deg, ${color} 0%, ${accent2} 50%, #06b6d4 100%)`;
+        document.documentElement.style.setProperty('--gradient-1', gradient);
+
+        // Update data-accent attribute on body to track custom theme
+        document.body.setAttribute('data-accent', 'custom');
+
+        // Remove active class from all color pills and add it to custom
+        const colorPills = document.querySelectorAll('.color-pill, .mobile-color-btn');
+        colorPills.forEach(pill => {
+          pill.classList.remove('active');
+        });
+
+        // Find and activate the custom color pill
+        const customColorPill = document.querySelector('.c-custom, [onclick*="openColorPicker"]') ||
+                                 Array.from(colorPills).find(btn => btn.onclick && btn.onclick.toString().includes('openColorPicker'));
+        if (customColorPill) {
+          customColorPill.classList.add('active');
+        }
+      }
+
+      function calculateComplementaryColor(color) {
+        // Convert hex to RGB
+        let r = 0, g = 0, b = 0;
+        if (color.length === 7) {
+          r = parseInt(color.substring(1, 3), 16);
+          g = parseInt(color.substring(3, 5), 16);
+          b = parseInt(color.substring(5, 7), 16);
+        }
+
+        // Generate a complementary color by adjusting RGB values
+        r = Math.min(255, r + 50);
+        g = Math.min(255, g + 30);
+        b = Math.min(255, b + 70);
+
+        // Ensure the color is not too light
+        if (r > 220 && g > 220 && b > 220) {
+          r = Math.max(0, r - 100);
+          g = Math.max(0, g - 100);
+          b = Math.max(0, b - 100);
+        }
+
+        return `rgb(${r}, ${g}, ${b})`;
+      }
+
+      // Voice recognition variables
+      let recognition;
+      let isListening = false;
+
+      // Initialize Speech Recognition if browser supports it
+      function initSpeechRecognition() {
+        if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+          const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+          recognition = new SpeechRecognition();
+          recognition.continuous = false;
+          recognition.interimResults = true;
+          recognition.lang = 'id-ID'; // Set to Indonesian language
+
+          recognition.onresult = function(event) {
+            let transcript = '';
+            for (let i = 0; i < event.results.length; i++) {
+              if (event.results[i].isFinal) {
+                transcript = event.results[i][0].transcript;
+              } else {
+                transcript += event.results[i][0].transcript;
+              }
+            }
+            document.getElementById('userPrompt').value = transcript;
+          };
+
+          recognition.onerror = function(event) {
+            console.error('Speech recognition error', event.error);
+            stopListening();
+          };
+
+          recognition.onend = function() {
+            stopListening();
+          };
+        } else {
+          alert('Browser Anda tidak mendukung fitur Speech Recognition. Silakan gunakan browser modern seperti Chrome.');
+          stopListening();
+        }
+      }
+
+      // Function to start voice recording
+      function startVoice() {
+        if (!recognition) {
+          initSpeechRecognition();
+        }
+
+        if (recognition) {
+          try {
+            document.getElementById('sendMicBtn').innerHTML = '<i class="fas fa-circle"/>';
+            document.getElementById('sendMicBtn').classList.remove('mic');
+            document.getElementById('sendMicBtn').classList.add('send');
+            recognition.start();
+            isListening = true;
+          } catch (error) {
+            console.error('Error starting recognition:', error);
+            stopListening();
+          }
+        }
+      }
+
+      // Function to stop voice recording
+      function stopListening() {
+        if (recognition && isListening) {
+          recognition.stop();
+          document.getElementById('sendMicBtn').innerHTML = '<i class="fas fa-microphone"/>';
+          document.getElementById('sendMicBtn').classList.remove('send');
+          document.getElementById('sendMicBtn').classList.add('mic');
+          isListening = false;
+        }
+      }
+
+      // Toggle voice recording
+      function handleSendMic() {
+        if (!isListening) {
+          startVoice();
+        } else {
+          stopListening();
+        }
+      }
+
+      // Initialize speech recognition on page load
+      document.addEventListener('DOMContentLoaded', function() {
+        initSpeechRecognition();
+      });
+
+      // More dropdown functions
+      function toggleMoreDropdown() {
+        const dropdown = document.getElementById('moreDropdown');
+        const isVisible = dropdown.classList.contains('show');
+
+        if (isVisible) {
+          closeMoreDropdown();
+        } else {
+          dropdown.classList.add('show');
+          // Close dropdown when clicking outside
+          setTimeout(() => {
+            document.addEventListener('click', closeMoreDropdownOnClickOutside);
+          }, 10);
+        }
+      }
+
+      function closeMoreDropdown() {
+        const dropdown = document.getElementById('moreDropdown');
+        dropdown.classList.remove('show');
+        document.removeEventListener('click', closeMoreDropdownOnClickOutside);
+      }
+
+      function closeMoreDropdownOnClickOutside(event) {
+        const dropdown = document.getElementById('moreDropdown');
+        const moreBtn = document.querySelector('[onclick*="toggleMoreDropdown"]');
+
+        if (!dropdown.contains(event.target) && !moreBtn.contains(event.target)) {
+          closeMoreDropdown();
+        }
+      }
+
+      // More menu functions
+      function shareCurrentPage() {
+        if (navigator.share) {
+          navigator.share({
+            title: 'Santrilogy AI',
+            text: 'Check out Santrilogy AI - Your virtual Islamic study companion',
+            url: window.location.href
+          }).catch(console.error);
+        } else {
+          // Fallback: Copy to clipboard
+          navigator.clipboard.writeText(window.location.href).then(() => {
+            alert('Link copied to clipboard!');
+          });
+        }
+        closeMoreDropdown();
+      }
+
+      function downloadApp() {
+        alert('Download App feature coming soon!');
+        closeMoreDropdown();
+      }
+
+      function showPrivacyPolicy() {
+        alert('Privacy Policy page coming soon!');
+        closeMoreDropdown();
+      }
+
+      function showTermsConditions() {
+        alert('Terms & Conditions page coming soon!');
+        closeMoreDropdown();
+      }
+
+      // Responsive toggle for tools
+      function toggleToolsResponsive() {
+        const isMobile = window.innerWidth <= 768;
+
+        if (isMobile) {
+          // On mobile, show the mobile modal with slide up animation
+          showToolsModal();
+        } else {
+          // On desktop, toggle the desktop dropdown
+          toggleTools();
+        }
+      }
+
+      // Modified showToolsModal to add swipe gesture support
+      function showToolsModal() {
+        const modal = document.getElementById('toolsModal');
+        const overlay = document.getElementById('toolsOverlay');
+
+        // Show the modal with slide up animation
+        modal.classList.add('show');
+        overlay.classList.add('show');
+        document.body.style.overflow = 'hidden';
+      }
+
+      function closeToolsModal() {
+        const modal = document.getElementById('toolsModal');
+        const overlay = document.getElementById('toolsOverlay');
+
+        modal.classList.remove('show');
+        overlay.classList.remove('show');
+        document.body.style.overflow = '';
+      }
+
+      // Toggle desktop tools dropdown
+      function toggleTools() {
+        const dropdown = document.getElementById('toolsDropdown');
+        const isVisible = dropdown.classList.contains('show');
+
+        if (isVisible) {
+          dropdown.classList.remove('show');
+        } else {
+          dropdown.classList.add('show');
+          // Close dropdown when clicking outside
+          setTimeout(() => {
+            document.addEventListener('click', closeToolsDropdownOnClickOutside);
+          }, 10);
+        }
+      }
+
+      function closeToolsDropdown() {
+        document.getElementById('toolsDropdown').classList.remove('show');
+        document.removeEventListener('click', closeToolsDropdownOnClickOutside);
+      }
+
+      function closeToolsDropdownOnClickOutside(event) {
+        const dropdown = document.getElementById('toolsDropdown');
+        const plusBtn = document.getElementById('plusBtn');
+
+        if (!dropdown.contains(event.target) && !plusBtn.contains(event.target)) {
+          closeToolsDropdown();
+        }
+      }
+
+      // Setup swipe gesture for mobile modal
+      document.addEventListener('DOMContentLoaded', function() {
+        // Initialize speech recognition on page load
+        initSpeechRecognition();
+
+        // Setup swipe gestures
+        setupSwipeGesture();
+      });
+
+      function setupSwipeGesture() {
+        const modal = document.getElementById('toolsModal');
+        if (!modal) return;
+
+        let startY = 0;
+        let currentY = 0;
+        let isSwiping = false;
+
+        modal.addEventListener('touchstart', (e) => {
+          startY = e.touches[0].clientY;
+          isSwiping = true;
+        });
+
+        modal.addEventListener('touchmove', (e) => {
+          if (!isSwiping) return;
+
+          currentY = e.touches[0].clientY;
+          const deltaY = currentY - startY;
+
+          // Only allow swiping down
+          if (deltaY > 0) {
+            modal.style.transform = `translateY(${deltaY}px)`;
+          }
+        });
+
+        modal.addEventListener('touchend', (e) => {
+          if (!isSwiping) return;
+
+          const deltaY = currentY - startY;
+          const threshold = 100; // Minimum distance to close modal
+
+          if (deltaY > threshold) {
+            // Swipe down enough to close the modal
+            closeToolsModal();
+          } else {
+            // Reset position
+            modal.style.transform = 'translateY(0)';
+          }
+
+          isSwiping = false;
+        });
+      }
+    </script>
+
     <!-- External JavaScript for Santrilogy AI -->
-    <script src="https://cdn.jsdelivr.net/gh/yourusername/santrilogy-ai@main/optimized-assets/js/app.js"></script>
+   <script src='https://cdn.jsdelivr.net/gh/santrilogyapp/santrilogy-ai@main/optimized-assets/js/app.js'/>
   </body>
 </html>
