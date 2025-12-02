@@ -872,13 +872,13 @@
         display: flex;
         flex-direction: column;
         height: 100%;
-        margin-left: var(--sidebar-w);
+        margin-left: 0;
         transition: margin-left var(--transition-slow);
         position: relative;
       }
 
-      .sidebar.collapsed ~ .main {
-        margin-left: 0;
+      .sidebar:not(.collapsed) ~ .main {
+        margin-left: var(--sidebar-w);
       }
 
       /* Header */
@@ -2401,7 +2401,7 @@
       <div class='overlay' id='overlay' onclick='closeSidebar()'/>
 
       <!-- Sidebar -->
-      <aside class='sidebar' id='sidebar'>
+      <aside class='sidebar collapsed' id='sidebar'>
         <div class='sidebar-header'>
           <div class='logo-wrap'>
             <div class='atom-logo'>
@@ -3390,6 +3390,33 @@
             if (fillEl) fillEl.style.width = `${percentage}%`;
         },
 
+        // [BARU] FUNGSI: Cek Cache Jawaban
+        async checkCache(key) {
+            if (typeof idbKeyval === 'undefined') return null;
+            // Gunakan hash dari prompt sebagai kunci cache
+            const cacheKey = await this.hashText(key);
+            return await idbKeyval.get(cacheKey);
+        },
+
+        // [BARU] FUNGSI: Simpan Jawaban ke Cache
+        async saveCache(key, answer) {
+            if (typeof idbKeyval === 'undefined') return;
+            const cacheKey = await this.hashText(key);
+            await idbKeyval.set(cacheKey, { answer, timestamp: Date.now() });
+        },
+
+        // [BARU] FUNGSI: Simple Hash Helper (Untuk membuat key yang unik dari prompt)
+        async hashText(text) {
+            // Menggunakan hash sederhana, atau bisa pakai crypto API untuk hash MD5/SHA-256
+            let hash = 0;
+            for (let i = 0; i < text.length; i++) {
+                const char = text.charCodeAt(i);
+                hash = ((hash << 5) - hash) + char;
+                hash |= 0; // Convert to 32bit integer
+            }
+            return `cache-${hash.toString()}`;
+        },
+
         // Bersihkan Database
         async clear() {
             if (typeof idbKeyval !== 'undefined') await idbKeyval.clear();
@@ -3568,21 +3595,24 @@
     function getChatContext() {
         const context = [];
         const chatContainer = document.getElementById('chatContainer');
-        // Ambil elemen chat (abaikan loading/hidden)
         const bubbles = chatContainer.querySelectorAll('.post-outer');
 
-        // Ambil maksimal 6 pesan terakhir (3 pasang tanya-jawab)
-        const startIndex = Math.max(0, bubbles.length - 6);
+        // Batasi hingga 8 pesan terakhir (4 pasang tanya-jawab)
+        const maxContextLength = 8;
+        // Ambil pesan dalam urutan kronologis (dari yang terlama ke terbaru)
+        const startIndex = Math.max(0, bubbles.length - maxContextLength);
 
         for (let i = startIndex; i < bubbles.length; i++) {
             const bubble = bubbles[i];
             const isUser = bubble.querySelector('.msg-avatar.user');
             const body = bubble.querySelector('.post-body');
 
-            if (body) {
+            // Hanya ambil teks bersih jika elemen ada dan bukan pesan error/loading
+            if (body && body.innerText && body.innerText.trim().length > 1) {
                 context.push({
                     role: isUser ? 'user' : 'assistant',
-                    content: body.innerText.trim() // Gunakan innerText untuk mengambil teks bersih
+                    // Gunakan innerText, hapus newline/whitespace berlebihan
+                    content: body.innerText.trim().replace(/\s\s+/g, ' ')
                 });
             }
         }
@@ -3593,51 +3623,93 @@
     async function sendMessage() {
         const input = document.getElementById('userPrompt');
         const text = input.value.trim();
-        
+
         if (!text || AppState.isSending) return;
-        
+
         // Check character limit
         if (text.length > CONFIG.MAX_CHARS) {
             showToast('warning', 'Pesan Terlalu Panjang', `Maksimal ${CONFIG.MAX_CHARS} karakter`);
             return;
         }
-        
+
         AppState.isSending = true;
-        
+
         // Clear input
         input.value = '';
         input.style.height = 'auto';
         handleInputChange();
-        
+
         // Hide welcome screen
         const welcome = document.getElementById('welcomeScreen');
         if (welcome) welcome.style.display = 'none';
-        
+
         // Add user message
         addMessageBubble(text, 'user');
-        
+
         // Play sound
         playSound('send');
-        
+
         // Add loading indicator
         const loadingId = addLoadingIndicator();
 
-        // [BARU] Ambil Konteks Percakapan
-        const recentMessages = getChatContext();
-
-        // [BARU] Tambahkan pesan user saat ini ke antrian
-        const messagesPayload = [
-            ...recentMessages,
-            { role: "user", content: text }
-        ];
-
         try {
-            const response = await callAPI(messagesPayload);
+            // ===============================================
+            // [BARU] START: LOGIKA CACHE CHECK
+            // ===============================================
+            const cachedData = await DB.checkCache(text);
+
+            if (cachedData) {
+                // CACHE HIT: Tampilkan dari data lokal
+                removeLoadingIndicator(loadingId);
+                addMessageBubble(cachedData.answer, 'ai');
+                playSound('receive');
+
+                // Tambahkan badge atau notifikasi Caching
+                showToast('info', 'Cache Hit', 'Jawaban diambil secara instan dari database lokal.');
+
+                // Simpan ke History
+                if (AppState.settings.autoSave) {
+                    DB.saveChat({
+                        id: Date.now(),
+                        question: text.substring(0, 100),
+                        answer: cachedData.answer.substring(0, 200),
+                        timestamp: new Date().toISOString()
+                    });
+                }
+
+                // Lewati API call dan langsung ke finalisasi
+                return;
+            }
+            // ===============================================
+            // [BARU] END: LOGIKA CACHE CHECK
+            // ===============================================
+
+            const recentMessages = getChatContext();
+
+            // [BARU] Definisikan System Prompt untuk menstabilkan Peran AI
+            const SYSTEM_INSTRUCTION = {
+                role: "system",
+                content: "Kamu adalah 'Santrilogy AI', sahabat virtual yang cerdas dan menguasai ilmu agama Islam Ahlussunnah wal Jama'ah. Jawablah pertanyaan user dengan merujuk pada konteks percakapan sebelumnya."
+            };
+
+            // [KOREKSI PAYLOAD] Susun array messages baru
+            const messagesPayloadFinal = [
+                SYSTEM_INSTRUCTION, // Wajib kirim peran di awal
+                ...recentMessages,
+                { role: "user", content: text }
+            ];
+
+            const response = await callAPI(messagesPayloadFinal);
             removeLoadingIndicator(loadingId);
 
             if (response) {
                 addMessageBubble(response, 'ai');
                 playSound('receive');
+
+                // [BARU] SIMPAN JAWABAN KE CACHE LOKAL (Hanya jika berhasil)
+                if (response.length > 50) { // Hanya simpan jawaban yang relevan
+                    await DB.saveCache(text, response);
+                }
 
                 // [UBAH INI] Simpan ke IndexedDB
                 if (AppState.settings.autoSave) {
