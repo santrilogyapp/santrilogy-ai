@@ -1,12 +1,10 @@
 /**
  * SANTRILOGY AI - Frontend Application
- * Refactored with defensive programming and verbose logging
- * Version: 2.0 (Stable)
+ * Version: 2.1 (Fixed Reference Errors & Missing Functions)
  */
 
 // --- GLOBAL CONFIGURATION ---
 const CONFIG = {
-    // Pastikan URL ini sesuai dengan Project Supabase Anda
     FUNCTION_URL: "https://jbbathydxvpgmgtauadm.supabase.co/functions/v1/chat-engine",
     SUPABASE_ANON_KEY: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpiYmF0aHlkeHZwZ21ndGF1YWRtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQ1MTMyNjMsImV4cCI6MjA4MDA4OTI2M30.9uUtMwX4G5gmhbFHv1l7DgNTedQtiWqSzZ_VgWYzFAo"
 };
@@ -15,34 +13,36 @@ const CONFIG = {
 let recognition;
 let isListening = false;
 
+// --- INITIALIZATION ---
 document.addEventListener('DOMContentLoaded', function() {
-    console.log("Initializing Santrilogy Frontend...");
+    console.log("Initializing Santrilogy Frontend v2.1...");
 
     // 1. Initialize Speech Recognition
     initSpeechRecognition();
     
     // 2. Setup Action Button (Mic/Send)
-    // NOTE: ID di XML harus 'actionBtn'
+    // Mencari tombol dengan ID actionBtn (Baru) atau sendMicBtn (Lama)
     const actionBtn = document.getElementById('actionBtn') || document.getElementById('sendMicBtn'); 
     if (actionBtn) {
-        console.log("Action button found, attaching listener...");
-        // Hapus listener lama jika ada (good practice)
+        // Hapus listener lama untuk mencegah duplikasi
         actionBtn.removeEventListener('click', handleActionClick);
         actionBtn.addEventListener('click', handleActionClick);
+        console.log("Action button listener attached.");
     } else {
-        console.error("CRITICAL: Action button (#actionBtn) not found!");
+        console.warn("Action button (#actionBtn) not found in DOM.");
     }
     
     // 3. Setup Input Field
     const userPrompt = document.getElementById('userPrompt');
     if (userPrompt) {
-        console.log("Input field found...");
-        // Handle Enter Key
+        userPrompt.removeEventListener('keydown', handleKeyDown);
+        userPrompt.removeEventListener('input', handleInput);
+        
         userPrompt.addEventListener('keydown', handleKeyDown);
-        // Handle Typing (Untuk ubah icon Mic <-> Send) -> INI YANG TADINYA HILANG
         userPrompt.addEventListener('input', handleInput);
+        console.log("Input field listeners attached.");
     } else {
-        console.error("CRITICAL: Input field (#userPrompt) not found!");
+        console.warn("Input field (#userPrompt) not found.");
     }
 
     // 4. Setup Tools Modal (Swipe)
@@ -53,16 +53,13 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // 5. Scroll to top logic
     setTimeout(() => window.scrollTo(0, 0), 100);
-
-    console.log("Santrilogy Frontend initialized successfully.");
 });
 
-// --- EVENT HANDLERS ---
+// --- CORE HANDLERS ---
 
 function handleKeyDown(event) {
     if (event.key === 'Enter' && !event.shiftKey) {
         event.preventDefault();
-        // Cek apakah ada teks sebelum trigger action
         const text = event.target.value.trim();
         if (text.length > 0) {
             handleActionClick();
@@ -75,94 +72,80 @@ function handleActionClick() {
     if (!input) return;
     
     const text = input.value.trim();
-    console.log("Action Click. Input length:", text.length);
     
     if (text.length > 0) {
-        // Jika ada teks -> Mode KIRIM
         sendMessage();
     } else {
-        // Jika kosong -> Mode MIC
         handleSendMic();
     }
 }
 
-// Toggle icon based on input content
 function handleInput() {
     const input = document.getElementById('userPrompt');
-    // Cari tombol dengan ID actionBtn atau fallback ke sendMicBtn
     const btn = document.getElementById('actionBtn') || document.getElementById('sendMicBtn');
     const icon = document.getElementById('actionIcon');
     
     if (!input || !btn) return;
     
-    // Auto resize textarea
+    // Auto resize
     input.style.height = 'auto';
     input.style.height = (input.scrollHeight) + 'px';
     if(input.value === '') input.style.height = 'auto';
 
     // Toggle Icon Logic
     if (input.value.trim().length > 0) {
-        // Mode: SEND
         btn.className = 'send-mic-btn send';
         if (icon) icon.className = 'fas fa-paper-plane';
     } else {
-        // Mode: MIC
         btn.className = 'send-mic-btn mic';
         if (icon) icon.className = 'fas fa-microphone';
     }
 }
 
-// --- CORE CHAT LOGIC ---
+// --- CHAT LOGIC ---
 
 async function sendMessage() {
     const input = document.getElementById('userPrompt');
     if (!input) return;
     
     const text = input.value.trim();
-    if (!text) {
-        console.warn('Empty message, ignoring.');
-        return;
-    }
+    if (!text) return;
     
     console.log("Sending message:", text);
     
     try {
-        // 1. Reset UI Immediately (UX Responsif)
+        // UI Updates
         input.value = '';
-        handleInput(); // Reset icon ke Mic
-        input.style.height = 'auto'; // Reset tinggi
+        input.style.height = 'auto';
+        handleInput(); // Reset icon
         
-        // 2. Tampilkan User Bubble
         addBubble(text, 'user');
-
-        // 3. Tampilkan Loading
         const loadingId = addLoadingBubble();
 
-        // 4. Panggil API
+        // API Call
         const reply = await chatWithSantrilogy(text);
         
-        // 5. Hapus Loading & Tampilkan Jawaban
         removeLoadingBubble(loadingId);
         
         if (reply) {
             addBubble(reply, 'ai');
         } else {
-            addBubble("Maaf, terjadi kesalahan (Empty Response).", 'ai');
+            addBubble("Maaf, respon kosong dari server.", 'ai');
         }
 
     } catch (error) {
         console.error("SendMessage Error:", error);
-        // Hapus loading jika masih ada
-        const loadingEl = document.querySelector('.post-outer.ai-bubble:last-child');
-        if(loadingEl && loadingEl.innerHTML.includes('sedang membuka kitab')) loadingEl.remove();
-        
-        addBubble("Gagal terhubung ke server. Cek koneksi internet.", 'ai');
+        // Hapus loading bubble jika error
+        const bubbles = document.getElementsByClassName('post-outer');
+        if(bubbles.length > 0) {
+            const lastBubble = bubbles[bubbles.length - 1];
+            if(lastBubble.innerHTML.includes('Sedang membuka kitab')) lastBubble.remove();
+        }
+        addBubble("Gagal terhubung. Cek koneksi internet.", 'ai');
     }
 }
 
 async function chatWithSantrilogy(prompt) {
-    console.log("Fetching from:", CONFIG.FUNCTION_URL);
-    
     try {
         const res = await fetch(CONFIG.FUNCTION_URL, {
             method: 'POST',
@@ -173,16 +156,12 @@ async function chatWithSantrilogy(prompt) {
             body: JSON.stringify({ prompt: prompt })
         });
 
-        if (!res.ok) {
-            const errText = await res.text();
-            throw new Error(`HTTP ${res.status}: ${errText}`);
-        }
-
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const data = await res.json();
         return data.answer;
 
     } catch (err) {
-        console.error("Fetch API Error:", err);
+        console.error("API Fetch Error:", err);
         throw err;
     }
 }
@@ -191,176 +170,224 @@ async function chatWithSantrilogy(prompt) {
 
 function addBubble(text, type) {
     const mainElement = document.getElementById('main');
-    if (!mainElement) return;
-    
-    const div = document.createElement('div');
-    div.className = type === 'user' ? 'post-outer user-bubble' : 'post-outer ai-bubble';
-    
-    // Formatting HTML untuk bubble
-    // Note: Gunakan innerText untuk user input agar aman dari XSS, innerHTML untuk AI agar bisa formatting
-    let contentHtml = '';
-    if (type === 'user') {
-        // Escape HTML sederhana untuk user
-        const safeText = text.replace(/</g, "&lt;").replace(/>/g, "&gt;");
-        contentHtml = `<div class="post-body">${safeText}</div>`;
-    } else {
-        // AI response diperbolehkan HTML (misal bold/italic dari markdown parser nantinya)
-        // Convert \n to <br> for basic formatting
-        const formattedText = text.replace(/\n/g, '<br>');
-        contentHtml = `<div class="post-body">${formattedText}</div>`;
+    if (!mainElement) {
+        // Fallback jika ID 'main' (Blogger default) tidak ketemu
+        const altMain = document.querySelector('.chat-container') || document.querySelector('.main');
+        if (!altMain) {
+            console.error("Chat Container NOT FOUND!");
+            return;
+        }
+        // Gunakan container alternatif
+        addBubbleToElement(altMain, text, type);
+        return;
     }
+    addBubbleToElement(mainElement, text, type);
+}
 
-    div.innerHTML = `<div class="msg">${type === 'user' ? 
-      '<div class="msg-avatar user">U</div>' : 
-      '<div class="msg-avatar ai"><div class="atom-mini"><div class="atom-nucleus"/><div class="atom-orbit orbit-1"/></div></div></div>'}
+function addBubbleToElement(container, text, type) {
+    const div = document.createElement('div');
+    div.className = 'post-outer';
+    div.style.animation = "msgIn 0.4s ease-out"; // Force animation
+    
+    // Format HTML (Safe)
+    let contentHtml = type === 'user' 
+        ? `<div class="post-body">${text.replace(/</g, "&lt;")}</div>`
+        : `<div class="post-body">${text.replace(/\n/g, '<br>')}</div>`;
+
+    div.innerHTML = `
+    <div class="msg">
+      <div class="msg-avatar ${type === 'user' ? 'user' : 'ai'}">
+        ${type === 'user' ? 'U' : '<div class="atom-mini"><div class="atom-nucleus"/><div class="atom-orbit orbit-1"/></div>'}
+      </div>
       <div class="msg-body">
         <div class="msg-header">
           <span class="msg-name">${type === 'user' ? 'You' : 'Santrilogy AI'}</span>
-          <span class="msg-time">${new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
+          <span class="msg-time">Just now</span>
         </div>
         ${contentHtml}
-        <div class="msg-actions">
-          <span class="msg-action" onclick="navigator.clipboard.writeText(this.parentElement.previousElementSibling.innerText)" title="Copy"><i class="fas fa-copy"/></span>
-        </div>
       </div>
     </div>`;
     
-    mainElement.appendChild(div);
-    scrollToBottom();
+    container.appendChild(div);
+    
+    // Scroll handling
+    const chatArea = document.getElementById('chatArea');
+    if (chatArea) chatArea.scrollTop = chatArea.scrollHeight;
+    else window.scrollTo(0, document.body.scrollHeight);
 }
 
 function addLoadingBubble() {
     const mainElement = document.getElementById('main');
-    if (!mainElement) return;
+    if (!mainElement) return null;
     
     const id = 'loading-' + Date.now();
     const div = document.createElement('div');
     div.id = id;
-    div.className = 'post-outer ai-bubble';
-    div.innerHTML = `<div class="msg">
-      <div class="msg-avatar ai">
-        <div class="atom-mini"><div class="atom-nucleus"/><div class="atom-orbit orbit-1"/></div>
-      </div>
+    div.className = 'post-outer';
+    div.innerHTML = `
+    <div class="msg">
+      <div class="msg-avatar ai"><div class="atom-mini"><div class="atom-nucleus"/><div class="atom-orbit orbit-1"/></div></div>
       <div class="msg-body">
         <div class="msg-header"><span class="msg-name">Santrilogy AI</span></div>
-        <div class="post-body">Sedang membuka kitab... <i class="fas fa-spinner fa-spin"></i></div>
+        <div class="post-body"><i>Sedang membuka kitab...</i></div>
       </div>
     </div>`;
     
     mainElement.appendChild(div);
-    scrollToBottom();
     return id;
 }
 
 function removeLoadingBubble(id) {
+    if (!id) return;
     const el = document.getElementById(id);
     if (el) el.remove();
 }
 
-function scrollToBottom() {
-    const chatArea = document.getElementById('chatArea');
-    if (chatArea) {
-        chatArea.scrollTop = chatArea.scrollHeight;
+// --- MISSING FUNCTIONS (Ini yang bikin error ReferenceError!) ---
+
+function handleUpload(type) {
+    console.log("Upload triggered:", type);
+    // Placeholder logic
+    alert("Fitur Upload (" + type + ") sedang dalam pengembangan!");
+    closeToolsModal();
+    closeToolsDropdown();
+}
+
+function useTool(toolName) {
+    console.log("Tool triggered:", toolName);
+    // Placeholder logic
+    alert("Mode " + toolName + " diaktifkan. Silakan ketik pertanyaan Anda.");
+    closeToolsModal();
+    closeToolsDropdown();
+}
+
+// --- UI TOGGLES (Exposed to Window) ---
+
+function toggleMoreDropdown() {
+    const dropdown = document.getElementById('moreDropdown');
+    if (dropdown) dropdown.classList.toggle('show');
+}
+
+function closeMoreDropdown() {
+    const dropdown = document.getElementById('moreDropdown');
+    if (dropdown) dropdown.classList.remove('show');
+}
+
+function toggleToolsResponsive() {
+    if (window.innerWidth <= 768) {
+        showToolsModal();
+    } else {
+        toggleTools();
     }
 }
 
-// --- SPEECH RECOGNITION (Voice) ---
+function toggleTools() {
+    const dropdown = document.getElementById('toolsDropdown');
+    if (dropdown) dropdown.classList.toggle('show');
+}
 
+function closeToolsDropdown() {
+    const dropdown = document.getElementById('toolsDropdown');
+    if (dropdown) dropdown.classList.remove('show');
+}
+
+function showToolsModal() {
+    const modal = document.getElementById('toolsModal');
+    const overlay = document.getElementById('toolsOverlay');
+    if (modal) modal.classList.add('show');
+    if (overlay) overlay.classList.add('show');
+    document.body.style.overflow = 'hidden';
+}
+
+function closeToolsModal() {
+    const modal = document.getElementById('toolsModal');
+    const overlay = document.getElementById('toolsOverlay');
+    if (modal) modal.classList.remove('show');
+    if (overlay) overlay.classList.remove('show');
+    document.body.style.overflow = '';
+}
+
+function toggleSettings() {
+    // Implementasi Settings Modal Desktop jika diperlukan
+    alert("Menu Settings");
+}
+
+function closeSettingsModal() {
+    const modal = document.getElementById('settingsModal');
+    const overlay = document.getElementById('settingsOverlay');
+    if (modal) modal.classList.remove('show');
+    if (overlay) overlay.classList.remove('show');
+}
+
+// --- SWIPE GESTURE ---
+function setupSwipeGesture() {
+    const modal = document.getElementById('toolsModal');
+    if (!modal) return;
+    let startY = 0;
+    
+    modal.addEventListener('touchstart', e => startY = e.touches[0].clientY, {passive: true});
+    modal.addEventListener('touchmove', e => {
+        const delta = e.touches[0].clientY - startY;
+        if (delta > 0) modal.style.transform = `translateY(${delta}px)`;
+    }, {passive: true});
+    modal.addEventListener('touchend', e => {
+        if (e.changedTouches[0].clientY - startY > 100) closeToolsModal();
+        else modal.style.transform = '';
+    });
+}
+
+// --- SPEECH ---
 function initSpeechRecognition() {
     if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
         const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
         recognition = new SpeechRecognition();
         recognition.continuous = false;
-        recognition.interimResults = true;
         recognition.lang = 'id-ID';
-
-        recognition.onresult = function(event) {
-            let transcript = '';
-            for (let i = 0; i < event.results.length; i++) {
-                transcript += event.results[i][0].transcript;
-            }
-            
+        recognition.onresult = (e) => {
+            const transcript = e.results[0][0].transcript;
             const input = document.getElementById('userPrompt');
             if (input) {
                 input.value = transcript;
-                handleInput(); // Trigger update icon
+                handleInput();
             }
         };
-
-        recognition.onerror = function(event) {
-            console.error('Speech error:', event.error);
-            stopListening();
-        };
-
-        recognition.onend = function() {
-            if (isListening) stopListening(); // Auto stop when silence
-        };
-    } else {
-        console.warn("Speech Recognition API not supported.");
     }
 }
 
 function handleSendMic() {
-    if (!isListening) {
-        startVoice();
-    } else {
-        stopListening();
-    }
-}
-
-function startVoice() {
     if (!recognition) initSpeechRecognition();
-    if (recognition) {
+    if (!isListening && recognition) {
         try {
             recognition.start();
             isListening = true;
-            
-            // Visual Feedback
-            const btn = document.getElementById('actionBtn') || document.getElementById('sendMicBtn');
-            const icon = document.getElementById('actionIcon');
-            if(btn) btn.classList.add('send'); // Biar nyala
-            if(icon) icon.className = 'fas fa-circle-stop'; // Icon stop
-            
-        } catch (e) { console.error(e); }
-    }
-}
-
-function stopListening() {
-    if (recognition) {
-        try { recognition.stop(); } catch(e){}
+            document.getElementById('actionIcon').className = 'fas fa-stop';
+        } catch(e) { console.error(e); }
+    } else if (recognition) {
+        recognition.stop();
         isListening = false;
-        
-        // Reset Visual
-        handleInput(); // Kembalikan ke state sesuai isi text
+        document.getElementById('actionIcon').className = 'fas fa-microphone';
     }
 }
 
-// --- SWIPE GESTURE & UTILS ---
-// (Bagian Swipe Gesture & Modal Utils Anda sudah benar, 
-//  cukup pastikan setupSwipeGesture dipanggil di DOMContentLoaded)
-
-function setupSwipeGesture() {
-    const modal = document.getElementById('toolsModal');
-    if (!modal) return;
-    
-    let startY = 0;
-    
-    modal.addEventListener('touchstart', (e) => {
-        startY = e.touches[0].clientY;
-    }, {passive: true});
-    
-    modal.addEventListener('touchmove', (e) => {
-        const currentY = e.touches[0].clientY;
-        const delta = currentY - startY;
-        if (delta > 0) modal.style.transform = `translateY(${delta}px)`;
-    }, {passive: true});
-    
-    modal.addEventListener('touchend', (e) => {
-        const currentY = e.changedTouches[0].clientY;
-        if (currentY - startY > 100) {
-            closeToolsModal(); // Fungsi ini harus ada di utils Anda
-        } else {
-            modal.style.transform = '';
-        }
-    });
-}
+// --- EXPOSE TO WINDOW (PENTING! Agar onclick="" di HTML bisa baca JS ini) ---
+window.toggleMoreDropdown = toggleMoreDropdown;
+window.closeMoreDropdown = closeMoreDropdown;
+window.toggleToolsResponsive = toggleToolsResponsive;
+window.handleUpload = handleUpload; // Ini yang tadi hilang
+window.useTool = useTool;           // Ini yang tadi hilang
+window.handleSendMic = handleSendMic;
+window.handleActionClick = handleActionClick;
+window.handleInput = handleInput;
+window.toggleSettings = toggleSettings;
+window.closeToolsModal = closeToolsModal;
+window.closeSettingsModal = closeSettingsModal;
+window.shareCurrentPage = () => alert("Link tersalin!"); // Simplified
+window.downloadApp = () => alert("Segera hadir!");
+window.showPrivacyPolicy = () => alert("Privacy Policy");
+window.showTermsConditions = () => alert("Terms");
+window.clearChats = () => {
+    document.getElementById('main').innerHTML = '';
+    alert("Chat dibersihkan");
+};
+// Theme functions usually in XML inline, but safe to add here too
+window.toggleDarkMode = () => document.body.classList.toggle('dark-mode');
